@@ -8,7 +8,7 @@ Zumo32U4OLED display;
 Zumo32U4IMU imu;
 Zumo32U4ButtonA buttonA;
 Zumo32U4Buzzer buzzer;
-Zumo32U4Encoders endcoders;
+Zumo32U4Encoders encoders;
 Zumo32U4Motors motors;
 Zumo32U4ProximitySensors proximitySensor; 
 Zumo32U4LineSensors lineSenors;
@@ -33,7 +33,7 @@ void forward(){
 
 void backward(){
   motors.setSpeeds(-speed, -speed);
-}¨
+};
 
 // rest the distance counter 
 void resetEncoders(){
