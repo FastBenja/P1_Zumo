@@ -2,6 +2,7 @@
 #include <Wire.h>
 #include <Zumo32U4.h>
 #include <PololuOLED.h>
+
 int speed = 20;
 
 Zumo32U4OLED display;
@@ -20,7 +21,7 @@ uint32_t turnAngle = 0;
 int16_t turnRate;
 uint16_t gyroLastUpdate = 0;
 
-float wheelCirc = 13.0;
+float wheelCirc = 122.52;
 
 // rest the distance counter
 void resetEncoders()
@@ -29,13 +30,13 @@ void resetEncoders()
   encoders.getCountsAndResetRight();
 }
 
-//Stop the movement
+// Stop the movement
 void stop()
 {
   motors.setSpeeds(0, 0);
 }
 
-//Encoder functions
+// Encoder functions
 float getDistance()
 {
   int countsL = encoders.getCountsLeft();
@@ -47,18 +48,27 @@ float getDistance()
   return (distanceL + distanceR) / 2;
 }
 
-//Go forward a distance with a specified speed
+// Go forward a distance with a specified speed
 void forward(int dist = 0, int speed = 0)
 {
   resetEncoders();
   while (getDistance() <= dist)
   {
-    motors.setSpeeds(speed, speed);
+    int diff = encoders.getCountsLeft() - encoders.getCountsRight();
+    Serial.println(diff);
+    if (diff == 0)
+    {
+      motors.setSpeeds(speed, speed);
+    }
+    else
+    {
+      motors.setSpeeds(speed, speed/diff);
+    }
   }
   stop();
 }
 
-//Go backwards a distance with a specified speed
+// Go backwards a distance with a specified speed
 void backward(int dist = 0, int speed = 0)
 {
   resetEncoders();
@@ -69,7 +79,7 @@ void backward(int dist = 0, int speed = 0)
   stop();
 }
 
-//Avoid collision with a object
+// Avoid collision with a object
 void avoid()
 {
   backward(100, 50);
@@ -93,7 +103,6 @@ void saveObject()
 void pose(int x, int y)
 {
 }
-
 
 // This should be called to set the starting point for measuring
 // a turn.  After calling this, turnAngle will be 0.
