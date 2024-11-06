@@ -54,6 +54,9 @@ void forward(int dist = 0, int speed = 0)
   resetEncoders();
   while (getDistance() <= dist)
   {
+    /*
+    If right is ahead, diff is negative. If right is behind, diff is positive.
+    */
     int diff = encoders.getCountsLeft() - encoders.getCountsRight();
     Serial.println(diff);
     if (diff == 0)
@@ -62,7 +65,8 @@ void forward(int dist = 0, int speed = 0)
     }
     else
     {
-      motors.setSpeeds(speed, speed/diff);
+      float compSpeed = speed * diff * 0.1;
+      motors.setSpeeds(speed, compSpeed);
     }
   }
   stop();
@@ -167,6 +171,6 @@ void setup()
 void loop()
 {
   // put your main code here, to run repeatedly:
-  forward(100, 400);
+  forward(1000, 100);
   backward(200, 400);
 }
