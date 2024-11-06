@@ -33,7 +33,7 @@ void forward(){
 
 void backward(){
   motors.setSpeeds(-speed, -speed);
-};
+}
 
 // rest the distance counter 
 void resetEncoders(){
@@ -55,7 +55,7 @@ void checkTheft(){
 
 }
 
-// is ways save object there in the way for robot 
+// is ways save object there are in the way for robot 
 void saveObject(){
 
 }
