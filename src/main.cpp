@@ -219,6 +219,25 @@ uint32_t getTurnAngleInDegrees()
   return (((uint32_t)turnAngle >> 16) * 360) >> 16;
 }
 
+void turnByAngle(int turnAngle = 0){
+  turnSensorReset();
+  if (turnAngle > 180){
+    motors.setSpeeds(speed, -speed);
+    while(getTurnAngleInDegrees() > turnAngle){
+      Serial.println(getTurnAngleInDegrees());
+      delay(10);
+    }
+  }
+  else{
+    motors.setSpeeds(-speed, speed);
+    while (getTurnAngleInDegrees() < turnAngle){
+      delay(10);
+      Serial.println(getTurnAngleInDegrees());
+    }
+  }
+  stop();
+}
+
 // Turn around and create scan of area, turn around again and compare.
 bool checkTheft()
 {
