@@ -14,12 +14,13 @@ Zumo32U4Motors motors;
 Zumo32U4ProximitySensors proximitySensor;
 Zumo32U4LineSensors lineSenors;
 // Zumo32U4FastGPIO fastGio;
-
+#define NUM_SENSORS 3
 // variables for gyro
 int16_t gyroOffset;
 uint32_t turnAngle = 0;
 int16_t turnRate;
 uint16_t gyroLastUpdate = 0;
+uint16_t lineSensorValues[NUM_SENSORS];
 
 float wheelCirc = 122.52;
 
@@ -233,6 +234,42 @@ uint32_t getTurnAngleInDegrees(){
   return (((uint32_t)turnAngle >> 16) * 360) >> 16;
 }
 
+void Linesensor()
+{
+  if (lineSensorValues[0]<1000 && lineSensorValues[1] < 1000 && lineSensorValues[2]< 1000) {
+    motors.setSpeeds(speed, speed);
+    if (getDistance()>150) {
+      motors.setSpeeds(speed, speed);
+      resetEncoders();
+    }
+  }
+  else if (getDistance()<50) {
+    int randnumber = random(300, 500); 
+    motors.setSpeeds(-200,200);
+    delay(randnumber);
+    stop();
+  } else if (getDistance()<100){
+    int randnumber = random(300, 500); 
+    motors.setSpeeds(200,-200);
+    delay(randnumber);
+    stop();
+  } else if (getDistance()<150){
+  int randNumber = random(300,500);
+  long dir = random(1,3);
+  if (dir == 1)
+    motors.setSpeeds(200,-200);
+    else motors.setSpeeds(-200,200);
+    delay(randNumber);
+    motors.setSpeeds(0,0);
+  } else {
+    stop();
+    resetEncoders();
+  }
+  delay(100);
+}
+    
+
+
 void setup()
 {
   // put your setup code here, to run once:
@@ -242,6 +279,7 @@ void setup()
   encoders.init();
   proximitySensor.initFrontSensor();
   lineSenors.initThreeSensors();
+  randomSeed(analogRead(0));
 }
 
 //unsigned long previusTime = 0;
@@ -251,8 +289,8 @@ void loop()
   // put your main code here, to run repeatedly:
   //forward(1000, 300);
   //backward(200, 400);
-Serial.println(getTurnAngleInDegrees());
 
+Linesensor();
 }  
 
   // if(millis() - previusTime > 52){
