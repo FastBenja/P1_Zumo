@@ -86,19 +86,7 @@ void avoid()
   forward(200, 50);
 }
 
-// Turn around and create scan of area, turn around again and compare.
-bool checkTheft()
-{
-  //Begin rotate
-  motors.setSpeeds(100,-100);
 
-  //Record a value for each x degree save it in list a
-
-  //After full rotation, repeat bit save in list b.
-
-  //Compare measurements with allowed error y
-  return true;
-}
 
 // is ways save object there in the way for robot, ambiguus for the moment.
 void saveObject()
@@ -127,7 +115,7 @@ void detectObject()
 
 /** \brief Robot turns right or left with a specified radius, angle and speed.
  *
- * \param dir 0 = Right 1 = Left 
+ * \param dir 0 = Right 1 = Left
  **/
 void turnArc(bool dir = 0, int radius = 100, int speed = 100)
 {
@@ -211,10 +199,57 @@ void turnSensorUpdate()
   turnAngle += (int64_t)d * 14680064 / 17578125;
 }
 
-uint32_t getTurnAngleInDegrees(){
+uint32_t getTurnAngleInDegrees()
+{
   turnSensorUpdate();
   // do some math and pointer magic to turn angle in seconds to angle in degree
   return (((uint32_t)turnAngle >> 16) * 360) >> 16;
+}
+
+// Turn around and create scan of area, turn around again and compare.
+bool checkTheft()
+{
+  int base[15], test[15];
+  uint32_t angle;
+  bool testPass = 0;
+  float error = 0;
+
+  // Begin rotate
+  motors.setSpeeds(150, -150);
+
+  // Record a value for each x degree save it in list a
+  while (angle < 359)
+  {
+    angle = getTurnAngleInDegrees();
+    if (angle % 24 == 0)
+    {
+      int index = angle / 24;
+      if (testPass)
+      {
+        base[index - 1] = proximitySensor.readBasicFront();
+        testPass = index >= 15;
+      }
+      else
+      {
+        test[index - 1] = proximitySensor.readBasicFront();
+      }
+    }
+  }
+
+  // After full rotation, repeat bit save in list b.
+  for (int i = 0; i < 14; i++)
+  {
+    error =+ abs(base[i]-test[i]);
+  }
+  error = error/15;
+  
+  // Compare measurements with allowed error y
+  if(error > 10){
+    return true;
+  }
+  else{
+    return false;
+  }
 }
 
 void setup()
@@ -228,29 +263,28 @@ void setup()
   lineSenors.initThreeSensors();
 }
 
-//unsigned long previusTime = 0;
+// unsigned long previusTime = 0;
 
 void loop()
 {
   // put your main code here, to run repeatedly:
-  //forward(1000, 300);
-  //backward(200, 400);
-Serial.println(getTurnAngleInDegrees());
+  // forward(1000, 300);
+  // backward(200, 400);
+  Serial.println(getTurnAngleInDegrees());
+}
 
-}  
+// if(millis() - previusTime > 52){
 
-  // if(millis() - previusTime > 52){
+// tjek foran
+// tjek linesor
+// forward
 
-  // tjek foran
-  // tjek linesor
-  // forward
+// previusTime = millis();
+// }
 
-  // previusTime = millis();
-  // }
+// if(millis() - previusTime1 > 317){
 
-  // if(millis() - previusTime1 > 317){
+// skærm
 
-  // skærm
-
-  // previusTime1 = millis();
-  // }
+// previusTime1 = millis();
+// }
