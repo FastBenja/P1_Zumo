@@ -112,8 +112,24 @@ void turnRandomAng()
 }
 
 // Robot detects if any object is infront of it, returns true if a object is present.
-void detectObject()
-{
+void detectObject(){
+  proximitySensor.read();                                              // Reads values for the front proximity sensor, if there is an object in range of the left or right IR light.
+  int leftReading = proximitySensor.countsFrontWithLeftLeds();
+  int rightReading = proximitySensor.countsFrontWithRightLeds();
+
+  int threshold = 5;                                                   // The threshold, when the robot is too close to an object.
+  
+  if (leftReading >= threshold || rightReading >= threshold){          // If the sensor readings is more or equal to the threshold value, then the robot should print "Obstacle ahead!" to the OLED.
+    display.clear();                                                   // Clears the OLED display.
+    display.gotoXY(0, 0);                                              // Sets the position on the OLED, where the message should be printed.
+    display.print(F("Obstacle"));                                      // Prints "Obstacle".
+    display.gotoXY(0, 1);                                              // Sets the position on the OLED, where the next line should be printed.
+    display.print(F("ahead!"));                                        // Prints "ahead!".
+  } 
+  else{
+    display.clear();                                                   // Clears the OLED display, if the threshold isn't reached.
+  }
+  delay(100);                                                          // A small delay, so the sensor don't reads too many values.
 }
 
 /** \brief Robot turns right or left with a specified radius, angle and speed.
