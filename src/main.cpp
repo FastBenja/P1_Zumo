@@ -76,7 +76,7 @@ void backward(int dist = 0, int speed = 0)
   stop();
 }
 
-// Avoid collision with a object
+// Avoid collision with a object by going around it, return true when done.
 void avoid()
 {
   backward(100, 50);
@@ -86,18 +86,36 @@ void avoid()
   forward(200, 50);
 }
 
-// there check if there theft
+// Turn around and create scan of area, turn around again and compare.
 void checkTheft()
 {
 }
 
-// is ways save object there in the way for robot
+// is ways save object there in the way for robot, ambiguus for the moment.
 void saveObject()
 {
 }
 
-/*???*/
+// Used to go to a specific location specified in x and y coordinates
 void pose(int x, int y)
+{
+}
+
+// Saves the curent position updates global var with current position in x and y coordinates
+void savePos()
+{
+}
+
+// Robot turns around itself with a random angle.
+void turnRandomAng()
+{
+}
+
+/** \brief Robot turns right or left with a specified radius, angle and speed.
+ *
+ * \param dir 0 = Right 1 = Left 
+ **/
+void turnArc(bool dir = 0, int radius = 100, int speed = 100)
 {
 }
 
@@ -169,22 +187,19 @@ void loop()
   forward(1000, 100);
   backward(200, 400);
 
-if(millis() - previusTime > 52){
+  // if(millis() - previusTime > 52){
 
-tjek foran
-tjek linesor
-forward
+  // tjek foran
+  // tjek linesor
+  // forward
 
-previusTime = millis();
-}
+  // previusTime = millis();
+  // }
 
-if(millis() - previusTime1 > 317){
+  // if(millis() - previusTime1 > 317){
 
-skærm
+  // skærm
 
-previusTime1 = millis();
-}
-
-
-
+  // previusTime1 = millis();
+  // }
 }
