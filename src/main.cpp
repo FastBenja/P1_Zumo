@@ -14,12 +14,13 @@ Zumo32U4Motors motors;
 Zumo32U4ProximitySensors proximitySensor;
 Zumo32U4LineSensors lineSenors;
 // Zumo32U4FastGPIO fastGio;
-
+#define NUM_SENSORS 3
 // variables for gyro
 int16_t gyroOffset;
 uint32_t turnAngle = 0;
 int16_t turnRate;
 uint16_t gyroLastUpdate = 0;
+uint16_t lineSensorValues[NUM_SENSORS];
 
 float wheelCirc = 122.52;
 
@@ -229,6 +230,7 @@ uint32_t getTurnAngleInDegrees(){
   return (((uint32_t)turnAngle >> 16) * 360) >> 16;
 }
 
+<<<<<<< HEAD
 // Robot turns around itself with a random angle.
 void turnByAngle(int turnAngle = 0){
   turnSensorReset();
@@ -248,6 +250,52 @@ void turnByAngle(int turnAngle = 0){
   }
   stop();
 }
+=======
+void Linesensor()
+{
+  // detects when the distance to an object is readable 
+  if (lineSensorValues[0]<1000 && lineSensorValues[1] < 1000 && lineSensorValues[2]< 1000) {
+    motors.setSpeeds(speed, speed);
+    if (getDistance()>150) {
+      motors.setSpeeds(speed, speed);
+      resetEncoders();
+    }
+  }
+  // decides which way the robot will turn
+  // right
+  else if (getDistance()<50) {
+    int randnumber = random(300, 500); 
+    motors.setSpeeds(-200,200);
+    delay(randnumber);
+    stop();
+    } 
+  // left
+  else if (getDistance()<100) {
+    int randnumber = random(300, 500); 
+    motors.setSpeeds(200,-200);
+    delay(randnumber);
+    stop();
+    } 
+  //random
+  else if (getDistance()<150){
+    int randNumber = random(300,500);
+    long dir = random(1,3);
+  if (dir == 1)
+    motors.setSpeeds(200,-200);
+    else motors.setSpeeds(-200,200);
+    delay(randNumber);
+    motors.setSpeeds(0,0);
+  } 
+  else {
+    stop();
+    resetEncoders();
+  }
+  
+  }
+
+    
+
+>>>>>>> ab0b6cc624abc73080846ce4969eea73f3cfd0be
 
 void setup()
 {
@@ -258,6 +306,7 @@ void setup()
   encoders.init();
   proximitySensor.initFrontSensor();
   lineSenors.initThreeSensors();
+  randomSeed(analogRead(0));
 }
 
 //unsigned long previusTime = 0;
@@ -267,9 +316,14 @@ void loop()
   // put your main code here, to run repeatedly:
   //forward(1000, 300);
   //backward(200, 400);
+<<<<<<< HEAD
 Serial.println(getTurnAngleInDegrees());
 turnRandomAng(90);
 delay(1000);
+=======
+
+Linesensor();
+>>>>>>> ab0b6cc624abc73080846ce4969eea73f3cfd0be
 }  
 
   // if(millis() - previusTime > 52){
