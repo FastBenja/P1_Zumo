@@ -3,7 +3,7 @@
 #include <Zumo32U4.h>
 #include <PololuOLED.h>
 
-int speed = 20;
+int speed = 100;
 
 Zumo32U4OLED display;
 Zumo32U4IMU imu;
@@ -117,8 +117,8 @@ void savePos()
 }
 
 // Robot turns around itself with a random angle.
-void turnRandomAng()
-{
+void turnRandomAng(turnAngle,speed){
+  
 }
 
 // Robot detects if any object is infront of it, returns true if a object is present.
