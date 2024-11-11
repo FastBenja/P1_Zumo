@@ -39,8 +39,8 @@ void stop()
 // Encoder functions
 float getDistance()
 {
-  int countsL = encoders.getCountsLeft();
-  int countsR = encoders.getCountsRight();
+  long int countsL = encoders.getCountsLeft();
+  long int countsR = encoders.getCountsRight();
 
   float distanceL = countsL / 900.0 * wheelCirc;
   float distanceR = countsR / 900.0 * wheelCirc;
@@ -58,7 +58,7 @@ void forward(int dist = 0, int speed = 0)
     If right is ahead, diff is negative. If right is behind, diff is positive.
     */
     int diff = encoders.getCountsLeft() - encoders.getCountsRight();
-    Serial.println(diff);
+    Serial.println(encoders.getCountsLeft());
     int compSpeed = speed + diff * 0.5;
     motors.setSpeeds(speed, compSpeed);
   }
@@ -87,8 +87,17 @@ void avoid()
 }
 
 // Turn around and create scan of area, turn around again and compare.
-void checkTheft()
+bool checkTheft()
 {
+  //Begin rotate
+  motors.setSpeeds(100,-100);
+
+  //Record a value for each x degree save it in list a
+
+  //After full rotation, repeat bit save in list b.
+
+  //Compare measurements with allowed error y
+  return true;
 }
 
 // is ways save object there in the way for robot, ambiguus for the moment.
@@ -173,6 +182,41 @@ void turnSensorSetup()
   turnSensorReset();
 }
 
+/* Read the gyro and update the angle.  This should be called as
+ frequently as possible while using the gyro to do turns. */
+void turnSensorUpdate()
+{
+  // Read the measurements from the gyro.
+  imu.readGyro();
+  turnRate = imu.g.z - gyroOffset;
+
+  // Figure out how much time has passed since the last update (dt)
+  uint16_t m = micros();
+  uint16_t dt = m - gyroLastUpdate;
+  gyroLastUpdate = m;
+
+  // Multiply dt by turnRate in order to get an estimation of how
+  // much the robot has turned since the last update.
+  // (angular change = angular velocity * time)
+  int32_t d = (int32_t)turnRate * dt;
+
+  // The units of d are gyro digits times microseconds.  We need
+  // to convert those to the units of turnAngle, where 2^29 units
+  // represents 45 degrees.  The conversion from gyro digits to
+  // degrees per second (dps) is determined by the sensitivity of
+  // the gyro: 0.07 degrees per second per digit.
+  //
+  // (0.07 dps/digit) * (1/1000000 s/us) * (2^29/45 unit/degree)
+  // = 14680064/17578125 unit/(digit*us)
+  turnAngle += (int64_t)d * 14680064 / 17578125;
+}
+
+uint32_t getTurnAngleInDegrees(){
+  turnSensorUpdate();
+  // do some math and pointer magic to turn angle in seconds to angle in degree
+  return (((uint32_t)turnAngle >> 16) * 360) >> 16;
+}
+
 void setup()
 {
   // put your setup code here, to run once:
@@ -184,13 +228,16 @@ void setup()
   lineSenors.initThreeSensors();
 }
 
-unsigned long previusTime = 0;
+//unsigned long previusTime = 0;
 
 void loop()
 {
   // put your main code here, to run repeatedly:
-  forward(1000, 100);
-  backward(200, 400);
+  //forward(1000, 300);
+  //backward(200, 400);
+Serial.println(getTurnAngleInDegrees());
+
+}  
 
   // if(millis() - previusTime > 52){
 
@@ -207,4 +254,3 @@ void loop()
 
   // previusTime1 = millis();
   // }
-}
