@@ -236,6 +236,7 @@ uint32_t getTurnAngleInDegrees(){
 
 void Linesensor()
 {
+  // detects when the distance to an object is readable 
   if (lineSensorValues[0]<1000 && lineSensorValues[1] < 1000 && lineSensorValues[2]< 1000) {
     motors.setSpeeds(speed, speed);
     if (getDistance()>150) {
@@ -243,30 +244,38 @@ void Linesensor()
       resetEncoders();
     }
   }
+  // decides which way the robot will turn
+  // right
   else if (getDistance()<50) {
     int randnumber = random(300, 500); 
     motors.setSpeeds(-200,200);
     delay(randnumber);
     stop();
-  } else if (getDistance()<100){
+    } 
+  // left
+  else if (getDistance()<100) {
     int randnumber = random(300, 500); 
     motors.setSpeeds(200,-200);
     delay(randnumber);
     stop();
-  } else if (getDistance()<150){
-  int randNumber = random(300,500);
-  long dir = random(1,3);
+    } 
+  //random
+  else if (getDistance()<150){
+    int randNumber = random(300,500);
+    long dir = random(1,3);
   if (dir == 1)
     motors.setSpeeds(200,-200);
     else motors.setSpeeds(-200,200);
     delay(randNumber);
     motors.setSpeeds(0,0);
-  } else {
+  } 
+  else {
     stop();
     resetEncoders();
   }
-  delay(100);
-}
+  
+  }
+
     
 
 
