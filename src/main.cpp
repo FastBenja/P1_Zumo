@@ -3,7 +3,7 @@
 #include <Zumo32U4.h>
 #include <PololuOLED.h>
 
-int speed = 100;
+int speed = 200;
 
 Zumo32U4OLED display;
 Zumo32U4IMU imu;
@@ -115,10 +115,6 @@ void savePos()
 {
 }
 
-// Robot turns around itself with a random angle.
-void turnRandomAng(turnAngle,speed){
-  
-}
 
 // Robot detects if any object is infront of it, returns true if a object is present.
 void detectObject(){
@@ -233,6 +229,26 @@ uint32_t getTurnAngleInDegrees(){
   return (((uint32_t)turnAngle >> 16) * 360) >> 16;
 }
 
+// Robot turns around itself with a random angle.
+void turnByAngle(int turnAngle = 0){
+  turnSensorReset();
+  if (turnAngle > 180){
+    motors.setSpeeds(speed, -speed);
+    while(getTurnAngleInDegrees() > turnAngle){
+      Serial.println(getTurnAngleInDegrees());
+      delay(10);
+    }
+  }
+  else{
+    motors.setSpeeds(-speed, speed);
+    while (getTurnAngleInDegrees() < turnAngle){
+      delay(10);
+      Serial.println(getTurnAngleInDegrees());
+    }
+  }
+  stop();
+}
+
 void setup()
 {
   // put your setup code here, to run once:
@@ -252,7 +268,8 @@ void loop()
   //forward(1000, 300);
   //backward(200, 400);
 Serial.println(getTurnAngleInDegrees());
-
+turnRandomAng(90);
+delay(1000);
 }  
 
   // if(millis() - previusTime > 52){
