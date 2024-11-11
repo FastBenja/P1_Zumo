@@ -111,6 +111,11 @@ void turnRandomAng()
 {
 }
 
+// Robot detects if any object is infront of it, returns true if a object is present.
+void detectObject()
+{
+}
+
 /** \brief Robot turns right or left with a specified radius, angle and speed.
  *
  * \param dir 0 = Right 1 = Left 
