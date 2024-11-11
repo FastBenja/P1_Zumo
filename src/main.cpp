@@ -161,9 +161,30 @@ void setup()
   lineSenors.initThreeSensors();
 }
 
+unsigned long previusTime = 0;
+
 void loop()
 {
   // put your main code here, to run repeatedly:
   forward(1000, 100);
   backward(200, 400);
+
+if(millis() - previusTime > 52){
+
+tjek foran
+tjek linesor
+forward
+
+previusTime = millis();
+}
+
+if(millis() - previusTime1 > 317){
+
+skærm
+
+previusTime1 = millis();
+}
+
+
+
 }
