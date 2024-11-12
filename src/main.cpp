@@ -36,6 +36,27 @@ int robotangle = 20;
 int checkposx = 0;
 int checkposy = 0;
 
+/**
+ * \brief SOUND THE ALARM !!!!
+ * \param time Duration in ms that the alarm should sound (Best if devisible by 500) 
+ * otherwise the duration will be prolonged until the time in ms is divisible by 500
+ */
+void ALARM(int time = 3000)
+{
+  int startTime = millis();
+  while (startTime < millis() - time)
+  {
+    buzzer.playFrequency(15000, 500, 10);
+    while (buzzer.isPlaying)
+    {
+    }
+    buzzer.playFrequency(12000, 500, 10);
+    while (buzzer.isPlaying)
+    {
+    }
+  }
+}
+
 /** \brief Function takes an angle from 0 to 360 and offsets it by an amount,
  * the function handels wrapping of the value back to 0
  * \param value The current absolute angle of the robot
@@ -257,7 +278,7 @@ bool detectObject()
     display.print(F("Obstacle")); // Prints "Obstacle".
     display.gotoXY(0, 1);         // Sets the position on the OLED, where the next line should be printed.
     display.print(F("ahead!"));   // Prints "ahead!".
-  return true;
+    return true;
   }
   else
   {
