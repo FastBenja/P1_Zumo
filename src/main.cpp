@@ -71,11 +71,7 @@ void forward(int dist = 0, int speed = 0)
     If right is ahead, diff is negative. If right is behind, diff is positive.
     */
     int diff = encoders.getCountsLeft() - encoders.getCountsRight();
-<<<<<<< HEAD
     //Serial.println(diff);
-=======
-    Serial.println(encoders.getCountsLeft());
->>>>>>> d3a634166310c577d5f329878881db4bcee5caca
     int compSpeed = speed + diff * 0.5;
     motors.setSpeeds(speed, compSpeed);
   }
@@ -109,13 +105,48 @@ void backward(int dist = 0, int speed = 0)
 }
 
 // Avoid collision with a object by going around it, return true when done.
-void avoid()
-{
-  backward(100, 50);
-  // turn
-  forward(50, 50);
-  // turn
-  forward(200, 50);
+void avoid(){
+  detectObject();
+  if (detectObject() == true){
+    backward(30,100);
+    stop();
+    delay(50);
+    
+    turnByAngle(90);
+    stop();
+    delay(50);
+    
+    forward(30,100);
+    stop();
+    delay(50);
+    
+    turnByAngle(270);
+    stop();
+    delay(50);
+    
+    forward(70,100);
+    stop();
+    delay(50);
+    
+    turnByAngle(270);
+    stop();
+    delay(50);
+    
+    forward(30,100);
+    stop();
+    delay(50);
+
+    turnByAngle(90);
+    stop();
+    delay(50);
+
+    forward(30,100);
+    stop();
+    delay(50);
+  }
+  else{
+    forward(50,100);
+  }
 }
 
 
@@ -192,34 +223,38 @@ void test() {
 
 }
 
-<<<<<<< HEAD
 // Robot turns around itself with a random angle.
 void turnRandomAng()
 {
 
 }
-=======
->>>>>>> d3a634166310c577d5f329878881db4bcee5caca
 
 // Robot detects if any object is infront of it, returns true if a object is present.
-void detectObject(){
-  proximitySensor.read();                                              // Reads values for the front proximity sensor, if there is an object in range of the left or right IR light.
+bool detectObject(){
+  proximitySensor.read();
   int leftReading = proximitySensor.countsFrontWithLeftLeds();
   int rightReading = proximitySensor.countsFrontWithRightLeds();
 
-  int threshold = 5;                                                   // The threshold, when the robot is too close to an object.
-  
-  if (leftReading >= threshold || rightReading >= threshold){          // If the sensor readings is more or equal to the threshold value, then the robot should print "Obstacle ahead!" to the OLED.
-    display.clear();                                                   // Clears the OLED display.
-    display.gotoXY(0, 0);                                              // Sets the position on the OLED, where the message should be printed.
-    display.print(F("Obstacle"));                                      // Prints "Obstacle".
-    display.gotoXY(0, 1);                                              // Sets the position on the OLED, where the next line should be printed.
-    display.print(F("ahead!"));                                        // Prints "ahead!".
-  } 
-  else{
-    display.clear();                                                   // Clears the OLED display, if the threshold isn't reached.
+  int threshold = 5;
+
+  Serial.print("Left front sensor: ");
+  Serial.println(leftReading);
+  Serial.print("Right front sensor: ");
+  Serial.println(rightReading);
+
+  if (leftReading >= threshold || rightReading >= threshold){
+    oled.clear();
+    oled.gotoXY(0, 0);
+    oled.print(F("Obstacle"));
+    oled.gotoXY(0, 1);
+    oled.print(F("ahead!"));
+    return true;
   }
-  delay(100);                                                          // A small delay, so the sensor don't reads too many values.
+  else{
+    oled.clear();
+    return false;
+  }
+  delay(100);
 }
 
 /** \brief Robot turns right or left with a specified radius, angle and speed.
@@ -449,19 +484,10 @@ void setup()
 void loop()
 {
   // put your main code here, to run repeatedly:
-<<<<<<< HEAD
   //MoveToPos(20,47);
   
   forward(51,200);
   delay(2000);
-=======
-  //forward(1000, 300);
-  //backward(200, 400);
-Serial.println(getTurnAngleInDegrees());
-turnRandom();
-delay(1000);
-} 
->>>>>>> d3a634166310c577d5f329878881db4bcee5caca
 
 // if(millis() - previusTime > 52){
 
