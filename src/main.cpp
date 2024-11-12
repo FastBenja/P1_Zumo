@@ -5,6 +5,8 @@
 
 int speed = 200;
 #define thieveThreshold 1.5
+// this are the postions the robot need to check// lave om på talene senere
+const int check[3][2] = {{20, 47}, {40, 38}, {65, 10}};
 
 Zumo32U4LCD display;
 Zumo32U4IMU imu;
@@ -16,6 +18,7 @@ Zumo32U4ProximitySensors proximitySensor;
 Zumo32U4LineSensors lineSenors;
 // Zumo32U4FastGPIO fastGio;
 #define NUM_SENSORS 3
+
 // variables for gyro
 int16_t gyroOffset;
 uint32_t turnAngle = 0;
@@ -25,16 +28,13 @@ uint16_t lineSensorValues[NUM_SENSORS];
 
 float wheelCirc = 122.52;
 
-// the postion of the robot
+// Postion of the robot
 int robotposx = 0;
 int robotposy = 0;
 int robotangle = 20;
 
 int checkposx = 0;
 int checkposy = 0;
-
-// this are the postions the robot need to check// lave om på talene senere
-const int check[3][2] = {{20, 47}, {40, 38}, {65, 10}};
 
 /** \brief Function takes an angle from 0 to 360 and offsets it by an amount,
  * the function handels wrapping of the value back to 0
@@ -578,8 +578,6 @@ void setup()
   // proximitySensor.setBrightnessLevels(proxBrightnesses,6);
   lineSenors.initThreeSensors();
 }
-
-// unsigned long previusTime = 0;
 
 void loop()
 {
