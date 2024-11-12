@@ -38,20 +38,20 @@ int checkposy = 0;
 
 /**
  * \brief SOUND THE ALARM !!!!
- * \param time Duration in ms that the alarm should sound (Best if devisible by 500) 
- * otherwise the duration will be prolonged until the time in ms is divisible by 500
+ * \param time Duration in ms that the alarm should sound (Best if devisible by 300)
+ * otherwise the duration will be prolonged until the time in ms is divisible by 300
  */
-void ALARM(int time = 3000)
+void ALARM(uint32_t time = 3000) 
 {
-  int startTime = millis();
-  while (startTime < millis() - time)
+  uint32_t startTime = millis();
+  while (millis() - startTime < time)
   {
-    buzzer.playFrequency(15000, 500, 10);
-    while (buzzer.isPlaying)
+    buzzer.playFrequency(5000, 300, 10);
+    while (buzzer.isPlaying())
     {
     }
-    buzzer.playFrequency(12000, 500, 10);
-    while (buzzer.isPlaying)
+    buzzer.playFrequency(6000, 300, 10);
+    while (buzzer.isPlaying())
     {
     }
   }
@@ -605,8 +605,10 @@ void loop()
   // put your main code here, to run repeatedly:
   // forward(1000, 300);
   // backward(200, 400);
-  Serial.println(checkTheft());
-  delay(30000);
+  // Serial.println(checkTheft());
+  // delay(30000);
+  ALARM(6000);
+  delay(10000);
 }
 
 // if(millis() - previusTime > 52){
