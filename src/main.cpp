@@ -238,6 +238,13 @@ void turnByAngle(int turnAngle = 0){
   stop();
 }
 
+void turnRandom(){
+  int randomNumber = random(10, 359);
+  turnByAngle(randomNumber);
+  stop();
+  delay(1000);
+}
+
 // Turn around and create scan of area, turn around again and compare.
 bool checkTheft()
 {
@@ -348,7 +355,7 @@ void loop()
   //forward(1000, 300);
   //backward(200, 400);
 Serial.println(getTurnAngleInDegrees());
-turnByAngle(90);
+turnRandom();
 delay(1000);
 } 
 
