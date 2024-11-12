@@ -243,15 +243,15 @@ bool detectObject(){
   Serial.println(rightReading);
 
   if (leftReading >= threshold || rightReading >= threshold){
-    oled.clear();
-    oled.gotoXY(0, 0);
-    oled.print(F("Obstacle"));
-    oled.gotoXY(0, 1);
-    oled.print(F("ahead!"));
+    display.clear();
+    display.gotoXY(0, 0);
+    display.print(F("Obstacle"));
+    display.gotoXY(0, 1);
+    display.print(F("ahead!"));
     return true;
   }
   else{
-    oled.clear();
+    display.clear();
     return false;
   }
   delay(100);
