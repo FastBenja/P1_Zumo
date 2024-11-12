@@ -34,20 +34,7 @@ int checkposx = 0;
 int checkposy = 0;
 
 // this are the postions the robot need to check// lave om på talene senere
-const int checkmax = 3;
-int check[checkmax][2] = {{20,47},{40,38},{65,10}};
-
-// the postion of the robot 
-int robotposx = 0;
-int robotposy = 0;
-int robotangle = 20;
-
-int checkposx = 0;
-int checkposy = 0;
-
-// this are the postions the robot need to check// lave om på talene senere
-const int checkmax = 3;
-int check[checkmax][2] = {{20,47},{40,38},{65,10}};
+const int check[3][2] = {{20,47},{40,38},{65,10}};
 
 /** \brief Function takes an angle from 0 to 360 and offsets it by an amount,
  * the function handels wrapping of the value back to 0
@@ -117,7 +104,7 @@ void forward(uint16_t dist = 0, uint16_t speed = 0)
   stop();
 
   // convert distance and the angle of robot to x and y coordinates
-  // istedet for angle skal der bruges "getTurnAngleInDegrees()"
+  // i stedet for angle skal der bruges "getTurnAngleInDegrees()"
   robotposx = robotposx + dist*10*cos(robotangle/(180/PI));// ikke færdig
   robotposy = robotposy + dist*10*sin(robotangle/(180/PI));
     
@@ -220,9 +207,8 @@ void MoveToPos(int x = 0, int y = 0){
 // this code just check if method "MoveToPos" Works 
 void test() {
 
-  for(int i = 0; i<checkmax; i++){
+  for(uint16_t i = 0; i<2; i++){
     MoveToPos(check[0][i],check[1][i]);
-
   }
 
 }
@@ -376,14 +362,6 @@ void turnByAngle(uint32_t angle = 0)
     }
   }
   stop();
-}
-
-// Turns the robot a random angle
-void turnRandom(){
-  int randomNumber = random(10, 359);
-  turnByAngle(randomNumber);
-  stop();
-  delay(1000);
 }
 
 // Turns the robot a random angle
