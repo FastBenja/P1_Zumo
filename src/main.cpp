@@ -3,9 +3,9 @@
 #include <Zumo32U4.h>
 #include <PololuOLED.h>
 
-int speed = 20;
+int speed = 200;
 
-Zumo32U4OLED display;
+Zumo32U4LCD display;
 Zumo32U4IMU imu;
 Zumo32U4ButtonA buttonA;
 Zumo32U4Buzzer buzzer;
@@ -14,14 +14,27 @@ Zumo32U4Motors motors;
 Zumo32U4ProximitySensors proximitySensor;
 Zumo32U4LineSensors lineSenors;
 // Zumo32U4FastGPIO fastGio;
-
+#define NUM_SENSORS 3
 // variables for gyro
 int16_t gyroOffset;
 uint32_t turnAngle = 0;
 int16_t turnRate;
 uint16_t gyroLastUpdate = 0;
+uint16_t lineSensorValues[NUM_SENSORS];
 
 float wheelCirc = 122.52;
+
+// the postion of the robot 
+int robotposx = 0;
+int robotposy = 0;
+int robotangle = 20;
+
+int checkposx = 0;
+int checkposy = 0;
+
+// this are the postions the robot need to check// lave om på talene senere
+const int checkmax = 3;
+int check[checkmax][2] = {{20,47},{40,38},{65,10}};
 
 // rest the distance counter
 void resetEncoders()
@@ -52,53 +65,92 @@ float getDistance()
 void forward(int dist = 0, int speed = 0)
 {
   resetEncoders();
-  while (getDistance() <= dist)
+  while (getDistance() <= dist*10)
   {
     /*
     If right is ahead, diff is negative. If right is behind, diff is positive.
     */
     int diff = encoders.getCountsLeft() - encoders.getCountsRight();
-    Serial.println(encoders.getCountsLeft());
+    //Serial.println(diff);
     int compSpeed = speed + diff * 0.5;
     motors.setSpeeds(speed, compSpeed);
   }
   stop();
+
+  // convert distance and the angle of robot to x and y coordinates
+  // istedet for angle skal der bruges "getTurnAngleInDegrees()"
+  robotposx = robotposx + dist*10*cos(robotangle/(180/PI));// ikke færdig
+  robotposy = robotposy + dist*10*sin(robotangle/(180/PI));
+    
+    // just to check 
+    display.clear();                                                   // Clears the OLED display.
+    display.gotoXY(0, 0);                                              // Sets the position on the OLED, where the message should be printed.
+    display.print(robotposx/10);   // 20                                  // Prints "Obstacle".
+    display.gotoXY(0, 1);                                              // Sets the position on the OLED, where the next line should be printed.
+    display.print(robotposy/10);  // 46
 }
 
 // Go backwards a distance with a specified speed
 void backward(int dist = 0, int speed = 0)
 {
   resetEncoders();
-  while (getDistance() >= -dist)
+  while (getDistance() >= -dist*10)
   {
     motors.setSpeeds(-speed, -speed);
   }
   stop();
+   // convert distance and the angle of robot to x and y coordinates
+  robotposx = robotposx - dist*10*cos(robotangle/(180/PI));// ikke færdig
+  robotposy = robotposy - dist*10*sin(robotangle/(180/PI));
 }
 
 // Avoid collision with a object by going around it, return true when done.
-void avoid()
-{
-  backward(100, 50);
-  // turn
-  forward(50, 50);
-  // turn
-  forward(200, 50);
+void avoid(){
+  detectObject();
+  if (detectObject() == true){
+    backward(30,100);
+    stop();
+    delay(50);
+    
+    turnByAngle(90);
+    stop();
+    delay(50);
+    
+    forward(30,100);
+    stop();
+    delay(50);
+    
+    turnByAngle(270);
+    stop();
+    delay(50);
+    
+    forward(70,100);
+    stop();
+    delay(50);
+    
+    turnByAngle(270);
+    stop();
+    delay(50);
+    
+    forward(30,100);
+    stop();
+    delay(50);
+
+    turnByAngle(90);
+    stop();
+    delay(50);
+
+    forward(30,100);
+    stop();
+    delay(50);
+  }
+  else{
+    forward(50,100);
+  }
 }
 
-// Turn around and create scan of area, turn around again and compare.
-bool checkTheft()
-{
-  //Begin rotate
-  motors.setSpeeds(100,-100);
 
-  //Record a value for each x degree save it in list a
 
-  //After full rotation, repeat bit save in list b.
-
-  //Compare measurements with allowed error y
-  return true;
-}
 
 
 // Used to go to a specific location specified in x and y coordinates
@@ -106,20 +158,20 @@ void pose(int x, int y)
 {
 }
 
-// Saves the curent position updates global var with current position in x and y coordinates
+// Saves the curent position updates global var with current position in x and y coordinates // not
 void savePos()
 {
-
 }
 
 // Robot turns around itself with a random angle.
 void turnRandomAng()
 {
+
 }
 
 // Robot detects if any object is infront of it, returns true if a object is present.
-void detectObject(){
-  proximitySensor.read();                                              // Reads values for the front proximity sensor, if there is an object in range of the left or right IR light.
+bool detectObject(){
+  proximitySensor.read();
   int leftReading = proximitySensor.countsFrontWithLeftLeds();
   int rightReading = proximitySensor.countsFrontWithRightLeds();
 
@@ -130,18 +182,19 @@ void detectObject(){
     display.gotoXY(0, 0);                                              // Sets the position on the OLED, where the message should be printed.
     display.print(F("Obstacle"));                                      // Prints "Obstacle".
     display.gotoXY(0, 1);                                              // Sets the position on the OLED, where the next line should be printed.
-    display.print(F("ahead!"));                                     // Prints "ahead!".
+    display.print(F("ahead!"));                                        // Prints "ahead!".
   } 
   else{
-    display.clear();                                                   // Clears the OLED display, if the threshold isn't reached.
+    display.clear();
+    return false;
   }
-  delay(100);                                                          // A small delay, so the sensor don't reads too many values.
+  delay(100);
 }
 
 
 /** \brief Robot turns right or left with a specified radius, angle and speed.
  *
- * \param dir 0 = Right 1 = Left 
+ * \param dir 0 = Right 1 = Left
  **/
 void turnArc(bool dir = 0, int radius = 100, int speed = 100)
 {
@@ -225,11 +278,140 @@ void turnSensorUpdate()
   turnAngle += (int64_t)d * 14680064 / 17578125;
 }
 
-uint32_t getTurnAngleInDegrees(){
+uint32_t getTurnAngleInDegrees()
+{
   turnSensorUpdate();
   // do some math and pointer magic to turn angle in seconds to angle in degree
   return (((uint32_t)turnAngle >> 16) * 360) >> 16;
 }
+
+void turnByAngle(int newconstant = 0){
+  
+  int currentconstant = 0;
+  int etellerandet = getTurnAngleInDegrees();
+
+   if( currentconstant >=  newconstant)
+    {
+      currentconstant -= newconstant;
+        while (newconstant != etellerandet)
+        {
+          motors.setSpeeds(0, -100);
+          etellerandet = getTurnAngleInDegrees();
+        }
+    }
+   else if( currentconstant <  newconstant)
+    {
+      currentconstant += newconstant;
+        while (newconstant != etellerandet)
+        {
+          motors.setSpeeds(0, 100);
+          etellerandet = getTurnAngleInDegrees();
+        }
+        motors.setSpeeds(0, 0);
+    }
+    
+    currentconstant = newconstant;
+    
+}
+
+// Turns the robot a random angle
+void turnRandom(){
+  int randomNumber = random(10, 359);
+  turnByAngle(randomNumber);
+  stop();
+  delay(1000);
+}
+
+// Turn around and create scan of area, turn around again and compare.
+bool checkTheft()
+{
+  int base[15], test[15];
+  uint32_t angle;
+  bool testPass = 0;
+  float error = 0;
+
+  // Begin rotate
+  motors.setSpeeds(150, -150);
+
+  // Record a value for each x degree save it in list a
+  while (angle < 359)
+  {
+    angle = getTurnAngleInDegrees();
+    if (angle % 24 == 0)
+    {
+      int index = angle / 24;
+      if (testPass)
+      {
+        base[index - 1] = proximitySensor.readBasicFront();
+        testPass = index >= 15;
+      }
+      else
+      {
+        test[index - 1] = proximitySensor.readBasicFront();
+      }
+    }
+  }
+
+  // After full rotation, repeat bit save in list b.
+  for (int i = 0; i < 14; i++)
+  {
+    error =+ abs(base[i]-test[i]);
+  }
+  error = error/15;
+  
+  // Compare measurements with allowed error y
+  if(error > 10){
+    return true;
+  }
+  else{
+    return false;
+  }
+}
+
+void Linesensor()
+{
+  // detects when the distance to an object is readable 
+  if (lineSensorValues[0]<1000 && lineSensorValues[1] < 1000 && lineSensorValues[2]< 1000) {
+    motors.setSpeeds(speed, speed);
+    if (getDistance()>150) {
+      motors.setSpeeds(speed, speed);
+      resetEncoders();
+    }
+  }
+  // decides which way the robot will turn
+  // right
+  else if (getDistance()<50) {
+    int randnumber = random(300, 500); 
+    motors.setSpeeds(-200,200);
+    delay(randnumber);
+    stop();
+    } 
+  // left
+  else if (getDistance()<100) {
+    int randnumber = random(300, 500); 
+    motors.setSpeeds(200,-200);
+    delay(randnumber);
+    stop();
+    } 
+  //random
+  else if (getDistance()<150){
+    int randNumber = random(300,500);
+    long dir = random(1,3);
+  if (dir == 1)
+    motors.setSpeeds(200,-200);
+    else motors.setSpeeds(-200,200);
+    delay(randNumber);
+    motors.setSpeeds(0,0);
+  } 
+  else {
+    stop();
+    resetEncoders();
+  }
+  
+  }
+
+    
+
 
 void setup()
 {
@@ -242,30 +424,31 @@ void setup()
   lineSenors.initThreeSensors();
 }
 
-//unsigned long previusTime = 0;
+// unsigned long previusTime = 0;
 
 void loop()
 {
   // put your main code here, to run repeatedly:
   //forward(1000, 300);
   //backward(200, 400);
-  //Serial.println(getTurnAngleInDegrees());
-  detectObject();
-
+turnByAngle(180);
+delay(1000);
+turnByAngle(90);
+delay(1000);
 }  
 
-  // if(millis() - previusTime > 52){
+// if(millis() - previusTime > 52){
 
-  // tjek foran
-  // tjek linesor
-  // forward
+// tjek foran
+// tjek linesor
+// forward
 
-  // previusTime = millis();
-  // }
+// previusTime = millis();
+// }
 
-  // if(millis() - previusTime1 > 317){
+// if(millis() - previusTime1 > 317){
 
-  // skærm
+// skærm
 
-  // previusTime1 = millis();
-  // }
+// previusTime1 = millis();
+// }
