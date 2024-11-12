@@ -238,6 +238,7 @@ void turnByAngle(int turnAngle = 0){
   stop();
 }
 
+// Turns the robot a random angle
 void turnRandom(){
   int randomNumber = random(10, 359);
   turnByAngle(randomNumber);
