@@ -100,10 +100,6 @@ bool checkTheft()
   return true;
 }
 
-// is ways save object there in the way for robot, ambiguus for the moment.
-void saveObject()
-{
-}
 
 // Used to go to a specific location specified in x and y coordinates
 void pose(int x, int y)
@@ -113,6 +109,7 @@ void pose(int x, int y)
 // Saves the curent position updates global var with current position in x and y coordinates
 void savePos()
 {
+
 }
 
 // Robot turns around itself with a random angle.
@@ -133,13 +130,14 @@ void detectObject(){
     display.gotoXY(0, 0);                                              // Sets the position on the OLED, where the message should be printed.
     display.print(F("Obstacle"));                                      // Prints "Obstacle".
     display.gotoXY(0, 1);                                              // Sets the position on the OLED, where the next line should be printed.
-    display.print(F("ahead!"));                                        // Prints "ahead!".
+    display.print(F("ahead!"));                                     // Prints "ahead!".
   } 
   else{
     display.clear();                                                   // Clears the OLED display, if the threshold isn't reached.
   }
   delay(100);                                                          // A small delay, so the sensor don't reads too many values.
 }
+
 
 /** \brief Robot turns right or left with a specified radius, angle and speed.
  *
@@ -251,7 +249,8 @@ void loop()
   // put your main code here, to run repeatedly:
   //forward(1000, 300);
   //backward(200, 400);
-Serial.println(getTurnAngleInDegrees());
+  //Serial.println(getTurnAngleInDegrees());
+  detectObject();
 
 }  
 
