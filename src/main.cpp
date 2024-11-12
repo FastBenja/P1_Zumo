@@ -4,6 +4,7 @@
 #include <PololuOLED.h>
 
 int speed = 200;
+#define thieveThreshold 1.5
 
 Zumo32U4LCD display;
 Zumo32U4IMU imu;
@@ -33,23 +34,44 @@ int checkposx = 0;
 int checkposy = 0;
 
 // this are the postions the robot need to check// lave om på talene senere
-const int checkmax = 3;
-int check[checkmax][2] = {{20,47},{40,38},{65,10}};
+const int check[3][2] = {{20,47},{40,38},{65,10}};
 
-// rest the distance counter
+/** \brief Function takes an angle from 0 to 360 and offsets it by an amount,
+ * the function handels wrapping of the value back to 0
+ * \param value The current absolute angle of the robot
+ * \param offset The amount to offset the angle
+ * \retval Offsat angle wrapped back to 0.
+ **/
+int offsetAngValue(int value, int offset)
+{
+  // Add offset and wrap within 0-359 range
+  int newValue = (value + offset) % 360;
+  // If result is negative, wrap it to 359
+  if (newValue < 0)
+  {
+    newValue += 360;
+  }
+  return newValue;
+}
+
+/** \brief Resets the encoder counts.
+ **/
 void resetEncoders()
 {
   encoders.getCountsAndResetLeft();
   encoders.getCountsAndResetRight();
 }
 
-// Stop the movement
+/** \brief Stops the robot movement
+ **/
 void stop()
 {
   motors.setSpeeds(0, 0);
 }
 
-// Encoder functions
+/**
+ * \retval Returns the accumulated distance that the robot has traveled based on the encoder counts.
+ */
 float getDistance()
 {
   long int countsL = encoders.getCountsLeft();
@@ -61,8 +83,12 @@ float getDistance()
   return (distanceL + distanceR) / 2;
 }
 
-// Go forward a distance with a specified speed
-void forward(int dist = 0, int speed = 0)
+/**
+ * \brief Go forward a distance with a specified speed
+ * \param dist Specify the distance that the robot should, move only allows posetive integers.
+ * \param speed Specify the speed at which the robot should move, only allows posetive integers.
+ */
+void forward(uint16_t dist = 0, uint16_t speed = 0)
 {
   resetEncoders();
   while (getDistance() <= dist*10)
@@ -78,7 +104,7 @@ void forward(int dist = 0, int speed = 0)
   stop();
 
   // convert distance and the angle of robot to x and y coordinates
-  // istedet for angle skal der bruges "getTurnAngleInDegrees()"
+  // i stedet for angle skal der bruges "getTurnAngleInDegrees()"
   robotposx = robotposx + dist*10*cos(robotangle/(180/PI));// ikke færdig
   robotposy = robotposy + dist*10*sin(robotangle/(180/PI));
     
@@ -151,7 +177,10 @@ void avoid(){
 
 
 
-
+// is ways save object there in the way for robot, ambiguus for the moment.
+void saveObject()
+{
+}
 
 // Used to go to a specific location specified in x and y coordinates
 void pose(int x, int y)
@@ -161,6 +190,62 @@ void pose(int x, int y)
 // Saves the curent position updates global var with current position in x and y coordinates // not
 void savePos()
 {
+  checkposx = robotposx;
+  checkposy = robotposy;
+}
+
+// It move the robot to given positions 
+void MoveToPos(int x = 0, int y = 0){
+  // varibel for the vektor 
+  int newposx = 0;
+  int newposy = 0;
+  // Dette er bare en float
+  int angle = 0;
+  int dist = 0;
+
+  // check if the positions need too add on or minus with
+  if(x>robotposx){
+    newposx = x - robotposx;
+  }
+  else {
+     newposx = robotposx - x;
+  }
+  
+  if(y>newposy){
+    newposy = y - robotposy;
+  }
+  else{
+    newposy = robotposy - y;
+  }
+  
+  newposx = robotposx + newposx;
+  newposy = robotposy + newposy;
+
+ // angle get round up it float return get convert to int
+  angle = atan(newposy/newposx)*(180/PI); // makes angle from the vektor 
+  dist = sqrt(pow(newposx,2)+pow(newposy,2)); // find length of the vektor 
+
+  if (angle>robotangle) {
+    angle = angle - robotangle;
+  }
+  else{
+    angle = robotangle - angle;
+  }
+  
+  // Her we put the angle and distance robot too travel 
+  // turn  
+  forward(dist,200);
+  
+
+}
+
+// this code just check if method "MoveToPos" Works 
+void test() {
+
+  for(uint16_t i = 0; i<2; i++){
+    MoveToPos(check[0][i],check[1][i]);
+  }
+
 }
 
 // Robot turns around itself with a random angle.
@@ -322,96 +407,156 @@ void turnRandom(){
   delay(1000);
 }
 
-// Turn around and create scan of area, turn around again and compare.
+/**
+ * \brief Rotates twice while recording values from the proximity sensors.
+ * \return Returns true if a thieve is detected. Returns false if no thieve is detected
+ */
 bool checkTheft()
 {
+  // Initialise variables
   int base[15], test[15];
   uint32_t angle;
-  bool testPass = 0;
+  uint8_t numTurns = 0;
   float error = 0;
+  bool stepNoted = false;
+  bool turnNoted = false;
 
-  // Begin rotate
-  motors.setSpeeds(150, -150);
+  // Store the initial angle, used for offset.
+  uint32_t startAngle = getTurnAngleInDegrees();
 
-  // Record a value for each x degree save it in list a
-  while (angle < 359)
+  // Begin rotation
+  motors.setSpeeds(-120, 120);
+
+  // Record a value for each 24 degrees (15 measurements) save it in base list.
+  // Next repeat the measurement but save the result in test list.
+
+  while (numTurns <= 1)
   {
-    angle = getTurnAngleInDegrees();
-    if (angle % 24 == 0)
+    // Update the offsat angle and print it.
+    angle = offsetAngValue(getTurnAngleInDegrees(), startAngle);
+    Serial.println("Vinkel: " + String(angle));
+
+    // Count number of full rotations
+    if (angle == 355 && turnNoted == false)
     {
+      turnNoted = true;
+      numTurns++;
+    }
+    else if (angle == 0)
+    {
+      turnNoted = false;
+    }
+
+    // Store reading from proximity sensor.
+    if (angle % 24 == 0 && stepNoted == false)
+    {
+      // Reads values for the front proximity sensor, if there is an object in range of the left or right IR light.
+      proximitySensor.read();
+      //Add the two readings for an avg.
+      int proxReading = (proximitySensor.countsFrontWithLeftLeds() + proximitySensor.countsFrontWithRightLeds());
+      stepNoted = true;
       int index = angle / 24;
-      if (testPass)
+      //Store in correct array
+      if (numTurns == 0)
       {
-        base[index - 1] = proximitySensor.readBasicFront();
-        testPass = index >= 15;
+        base[index] = proxReading;
       }
-      else
+      else if (numTurns == 1)
       {
-        test[index - 1] = proximitySensor.readBasicFront();
+        test[index] = proxReading;
       }
+    }
+    else
+    {
+      //Robot is not at an angle where a measurement should be taken.
+      stepNoted = false;
     }
   }
 
-  // After full rotation, repeat bit save in list b.
-  for (int i = 0; i < 14; i++)
+//After all measurements have been taken, stop the motion
+  stop();
+
+//Print all the recorded values
+  Serial.println("Base list:");
+  for (int j = 0; j < 15; j++)
   {
-    error =+ abs(base[i]-test[i]);
+    Serial.println(String(j) + ": " + String(int(base[j])));
   }
-  error = error/15;
-  
-  // Compare measurements with allowed error y
-  if(error > 10){
+  Serial.println();
+
+  Serial.println("Test list:");
+  for (int j = 0; j < 15; j++)
+  {
+    Serial.println(String(j) + ": " + String(int(test[j])));
+  }
+  Serial.println();
+
+  // Compare the two lists and calculate a mean deviation, store in error var. and print it
+  for (int i = 0; i < 15; i++)
+  {
+    error += abs(base[i] - test[i]);
+  }
+  error = error / 15;
+  Serial.println("Error: " + String(error));
+
+  // Compare measurements with allowed error and return based on result
+  if (error > thieveThreshold)
+  {
     return true;
   }
-  else{
+  else
+  {
     return false;
   }
 }
 
 void Linesensor()
 {
-  // detects when the distance to an object is readable 
-  if (lineSensorValues[0]<1000 && lineSensorValues[1] < 1000 && lineSensorValues[2]< 1000) {
+  // detects when the distance to an object is readable
+  if (lineSensorValues[0] < 1000 && lineSensorValues[1] < 1000 && lineSensorValues[2] < 1000)
+  {
     motors.setSpeeds(speed, speed);
-    if (getDistance()>150) {
+    if (getDistance() > 150)
+    {
       motors.setSpeeds(speed, speed);
       resetEncoders();
     }
   }
   // decides which way the robot will turn
   // right
-  else if (getDistance()<50) {
-    int randnumber = random(300, 500); 
-    motors.setSpeeds(-200,200);
+  else if (getDistance() < 50)
+  {
+    int randnumber = random(300, 500);
+    motors.setSpeeds(-200, 200);
     delay(randnumber);
     stop();
-    } 
+  }
   // left
-  else if (getDistance()<100) {
-    int randnumber = random(300, 500); 
-    motors.setSpeeds(200,-200);
+  else if (getDistance() < 100)
+  {
+    int randnumber = random(300, 500);
+    motors.setSpeeds(200, -200);
     delay(randnumber);
     stop();
-    } 
-  //random
-  else if (getDistance()<150){
-    int randNumber = random(300,500);
-    long dir = random(1,3);
-  if (dir == 1)
-    motors.setSpeeds(200,-200);
-    else motors.setSpeeds(-200,200);
+  }
+  // random
+  else if (getDistance() < 150)
+  {
+    int randNumber = random(300, 500);
+    long dir = random(1, 3);
+    if (dir == 1)
+      motors.setSpeeds(200, -200);
+    else
+      motors.setSpeeds(-200, 200);
     delay(randNumber);
-    motors.setSpeeds(0,0);
-  } 
-  else {
+    motors.setSpeeds(0, 0);
+  }
+  else
+  {
     stop();
     resetEncoders();
   }
-  
-  }
-
-    
-
+}
 
 void setup()
 {
@@ -421,6 +566,7 @@ void setup()
   turnSensorSetup();
   encoders.init();
   proximitySensor.initFrontSensor();
+  // proximitySensor.setBrightnessLevels(proxBrightnesses,6);
   lineSenors.initThreeSensors();
 }
 
@@ -429,13 +575,11 @@ void setup()
 void loop()
 {
   // put your main code here, to run repeatedly:
-  //forward(1000, 300);
-  //backward(200, 400);
-turnByAngle(180);
-delay(1000);
-turnByAngle(90);
-delay(1000);
-}  
+  // forward(1000, 300);
+  // backward(200, 400);
+  Serial.println(checkTheft());
+  delay(30000);
+}
 
 // if(millis() - previusTime > 52){
 
