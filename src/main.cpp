@@ -305,7 +305,7 @@ void turnByAngle(int newconstant = 0)
     currentconstant -= newconstant;
     while (newconstant != etellerandet)
     {
-      motors.setSpeeds(0, -100);
+      motors.setSpeeds(100, -100);
       etellerandet = getTurnAngleInDegrees();
     }
   }
@@ -314,7 +314,7 @@ void turnByAngle(int newconstant = 0)
     currentconstant += newconstant;
     while (newconstant != etellerandet)
     {
-      motors.setSpeeds(0, 100);
+      motors.setSpeeds(-100, 100);
       etellerandet = getTurnAngleInDegrees();
     }
     motors.setSpeeds(0, 0);
