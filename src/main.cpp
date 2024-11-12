@@ -71,11 +71,7 @@ void forward(int dist = 0, int speed = 0)
     If right is ahead, diff is negative. If right is behind, diff is positive.
     */
     int diff = encoders.getCountsLeft() - encoders.getCountsRight();
-<<<<<<< HEAD
     //Serial.println(diff);
-=======
-    Serial.println(encoders.getCountsLeft());
->>>>>>> d3a634166310c577d5f329878881db4bcee5caca
     int compSpeed = speed + diff * 0.5;
     motors.setSpeeds(speed, compSpeed);
   }
