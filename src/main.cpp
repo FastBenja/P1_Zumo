@@ -3,7 +3,7 @@
 #include <Zumo32U4.h>
 #include <PololuOLED.h>
 
-int speed = 200;
+int speed = 100;
 #define thieveThreshold 1.5
 // this are the postions the robot need to check// lave om på talene senere
 const int check[3][2] = {{20, 47}, {40, 38}, {65, 10}};
@@ -610,8 +610,7 @@ void loop()
   // backward(200, 400);
   // Serial.println(checkTheft());
   // delay(30000);
-  ALARM(6000);
-  delay(10000);
+  Linesensor();
 }
 
 // if(millis() - previusTime > 52){
