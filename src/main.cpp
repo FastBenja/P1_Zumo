@@ -542,6 +542,9 @@ bool checkTheft()
 
 void Linesensor()
 {
+  // Read line sensor values
+  lineSenors.read(lineSensorValues);
+  
   // detects when the distance to an object is readable
   if (lineSensorValues[0] < 1000 && lineSensorValues[1] < 1000 && lineSensorValues[2] < 1000)
   {
