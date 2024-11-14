@@ -112,7 +112,7 @@ float getDistance()
 void forward(uint16_t dist = 0, uint16_t speed = 0)
 {
   resetEncoders();
-  while (getDistance() <= dist * 10)
+  while (getDistance() <= dist)
   {
     /*
     If right is ahead, diff is negative. If right is behind, diff is positive.
@@ -126,8 +126,8 @@ void forward(uint16_t dist = 0, uint16_t speed = 0)
 
   // convert distance and the angle of robot to x and y coordinates
   // i stedet for angle skal der bruges "getTurnAngleInDegrees()"
-  robotposx = robotposx + dist * 10 * cos(robotangle / (180 / PI)); // ikke færdig
-  robotposy = robotposy + dist * 10 * sin(robotangle / (180 / PI));
+  robotposx = robotposx + dist * cos(robotangle / (180 / PI)); // ikke færdig
+  robotposy = robotposy + dist * sin(robotangle / (180 / PI));
 
   // just to check
   display.clear();               // Clears the OLED display.
@@ -141,14 +141,14 @@ void forward(uint16_t dist = 0, uint16_t speed = 0)
 void backward(int dist = 0, int speed = 0)
 {
   resetEncoders();
-  while (getDistance() >= -dist * 10)
+  while (getDistance() >= -dist)
   {
     motors.setSpeeds(-speed, -speed);
   }
   stop();
   // convert distance and the angle of robot to x and y coordinates
-  robotposx = robotposx - dist * 10 * cos(robotangle / (180 / PI)); // ikke færdig
-  robotposy = robotposy - dist * 10 * sin(robotangle / (180 / PI));
+  robotposx = robotposx - dist * cos(robotangle / (180 / PI)); // ikke færdig
+  robotposy = robotposy - dist * sin(robotangle / (180 / PI));
 }
 
 // is ways save object there in the way for robot, ambiguus for the moment.
