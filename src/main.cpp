@@ -3,8 +3,11 @@
 #include <Zumo32U4.h>
 #include <PololuOLED.h>
 
-int speed = 200;
+int speed = 100;
+int currentAngle = 0;
 #define thieveThreshold 1.5
+// this are the postions the robot need to check// lave om på talene senere
+const int check[3][2] = {{20, 47}, {40, 38}, {65, 10}};
 
 Zumo32U4LCD display;
 Zumo32U4IMU imu;
@@ -16,6 +19,7 @@ Zumo32U4ProximitySensors proximitySensor;
 Zumo32U4LineSensors lineSenors;
 // Zumo32U4FastGPIO fastGio;
 #define NUM_SENSORS 3
+
 // variables for gyro
 int16_t gyroOffset;
 uint32_t turnAngle = 0;
@@ -25,7 +29,7 @@ uint16_t lineSensorValues[NUM_SENSORS];
 
 float wheelCirc = 122.52;
 
-// the postion of the robot
+// Postion of the robot
 int robotposx = 0;
 int robotposy = 0;
 int robotangle = 20;
@@ -33,8 +37,26 @@ int robotangle = 20;
 int checkposx = 0;
 int checkposy = 0;
 
-// this are the postions the robot need to check// lave om på talene senere
-const int check[3][2] = {{20, 47}, {40, 38}, {65, 10}};
+/**
+ * \brief SOUND THE ALARM !!!!
+ * \param time Duration in ms that the alarm should sound (Best if devisible by 300)
+ * otherwise the duration will be prolonged until the time in ms is divisible by 300
+ */
+void ALARM(uint32_t time = 3000) 
+{
+  uint32_t startTime = millis();
+  while (millis() - startTime < time)
+  {
+    buzzer.playFrequency(5000, 300, 10);
+    while (buzzer.isPlaying())
+    {
+    }
+    buzzer.playFrequency(6000, 300, 10);
+    while (buzzer.isPlaying())
+    {
+    }
+  }
+}
 
 /** \brief Function takes an angle from 0 to 360 and offsets it by an amount,
  * the function handels wrapping of the value back to 0
@@ -77,8 +99,8 @@ float getDistance()
   long int countsL = encoders.getCountsLeft();
   long int countsR = encoders.getCountsRight();
 
-  float distanceL = countsL / 900.0 * wheelCirc;
-  float distanceR = countsR / 900.0 * wheelCirc;
+  float distanceL = countsL / 900.0 * (wheelCirc/10);
+  float distanceR = countsR / 900.0 * (wheelCirc/10);
 
   return (distanceL + distanceR) / 2;
 }
@@ -91,7 +113,7 @@ float getDistance()
 void forward(uint16_t dist = 0, uint16_t speed = 0)
 {
   resetEncoders();
-  while (getDistance() <= dist * 10)
+  while (getDistance() <= dist )
   {
     /*
     If right is ahead, diff is negative. If right is behind, diff is positive.
@@ -105,29 +127,29 @@ void forward(uint16_t dist = 0, uint16_t speed = 0)
 
   // convert distance and the angle of robot to x and y coordinates
   // i stedet for angle skal der bruges "getTurnAngleInDegrees()"
-  robotposx = robotposx + dist * 10 * cos(robotangle / (180 / PI)); // ikke færdig
-  robotposy = robotposy + dist * 10 * sin(robotangle / (180 / PI));
+  robotposx = robotposx + dist * cos(robotangle / (180 / PI)); // ikke færdig
+  robotposy = robotposy + dist * sin(robotangle / (180 / PI));
 
   // just to check
   display.clear();               // Clears the OLED display.
   display.gotoXY(0, 0);          // Sets the position on the OLED, where the message should be printed.
-  display.print(robotposx / 10); // 20                                  // Prints "Obstacle".
+  display.print(robotposx); // 20                                  // Prints "Obstacle".
   display.gotoXY(0, 1);          // Sets the position on the OLED, where the next line should be printed.
-  display.print(robotposy / 10); // 46
+  display.print(robotposy); // 46
 }
 
 // Go backwards a distance with a specified speed
 void backward(int dist = 0, int speed = 0)
 {
   resetEncoders();
-  while (getDistance() >= -dist * 10)
+  while (getDistance() >= -dist)
   {
     motors.setSpeeds(-speed, -speed);
   }
   stop();
   // convert distance and the angle of robot to x and y coordinates
-  robotposx = robotposx - dist * 10 * cos(robotangle / (180 / PI)); // ikke færdig
-  robotposy = robotposy - dist * 10 * sin(robotangle / (180 / PI));
+  robotposx = robotposx - dist * cos(robotangle / (180 / PI)); // ikke færdig
+  robotposy = robotposy - dist * sin(robotangle / (180 / PI));
 }
 
 // is ways save object there in the way for robot, ambiguus for the moment.
@@ -147,57 +169,8 @@ void savePos()
   checkposy = robotposy;
 }
 
-// It move the robot to given positions
-void MoveToPos(int x = 0, int y = 0)
-{
-  // varibel for the vektor
-  int newposx = 0;
-  int newposy = 0;
-  // Dette er bare en float
-  int angle = 0;
-  int dist = 0;
 
-  // check if the positions need too add on or minus with
-  if (x > robotposx)
-  {
-    newposx = x - robotposx;
-  }
-  else
-  {
-    newposx = robotposx - x;
-  }
-
-  if (y > newposy)
-  {
-    newposy = y - robotposy;
-  }
-  else
-  {
-    newposy = robotposy - y;
-  }
-
-  newposx = robotposx + newposx;
-  newposy = robotposy + newposy;
-
-  // angle get round up it float return get convert to int
-  angle = atan(newposy / newposx) * (180 / PI);   // makes angle from the vektor
-  dist = sqrt(pow(newposx, 2) + pow(newposy, 2)); // find length of the vektor
-
-  if (angle > robotangle)
-  {
-    angle = angle - robotangle;
-  }
-  else
-  {
-    angle = robotangle - angle;
-  }
-
-  // Her we put the angle and distance robot too travel
-  // turn
-  forward(dist, 200);
-}
-
-// this code just check if method "MoveToPos" Works
+/*/ this code just check if method "MoveToPos" Works
 void test()
 {
 
@@ -205,7 +178,7 @@ void test()
   {
     MoveToPos(check[0][i], check[1][i]);
   }
-}
+}*/
 
 /* Read the gyro and update the angle.  This should be called as
  frequently as possible while using the gyro to do turns. */
@@ -257,7 +230,7 @@ bool detectObject()
     display.print(F("Obstacle")); // Prints "Obstacle".
     display.gotoXY(0, 1);         // Sets the position on the OLED, where the next line should be printed.
     display.print(F("ahead!"));   // Prints "ahead!".
-  return true;
+    return true;
   }
   else
   {
@@ -273,33 +246,108 @@ uint32_t getTurnAngleInDegrees()
   return (((uint32_t)turnAngle >> 16) * 360) >> 16;
 }
 
-void turnByAngle(int newconstant = 0)
+void turnByAngle(int newAngle = 0)
 {
+  
+  bool check = true;
 
-  int currentconstant = 0;
-  int etellerandet = getTurnAngleInDegrees();
-
-  if (currentconstant >= newconstant)
-  {
-    currentconstant -= newconstant;
-    while (newconstant != etellerandet)
-    {
-      motors.setSpeeds(0, -100);
-      etellerandet = getTurnAngleInDegrees();
-    }
-  }
-  else if (currentconstant < newconstant)
-  {
-    currentconstant += newconstant;
-    while (newconstant != etellerandet)
-    {
-      motors.setSpeeds(0, 100);
-      etellerandet = getTurnAngleInDegrees();
-    }
-    motors.setSpeeds(0, 0);
+  int difference = 2;
+  int differenceMax = newAngle + difference;   
+   int differenceMin = newAngle + difference;  
+  
+  // check if max and min don't go over 360 and under 0
+  if(differenceMax > 360){
+    differenceMax = differenceMax -360;
   }
 
-  currentconstant = newconstant;
+  if (differenceMin < 0)
+  {
+    differenceMin = 360 + difference;
+    
+  }
+  
+  int gyroAngle = getTurnAngleInDegrees(); //save angle from the gyro
+
+  if (currentAngle >= newAngle) // if given angle is lower then old angle  // 0>90// 180>90
+  {
+    Serial.print("4");
+    currentAngle -= newAngle; // 0-90 // 90-180
+    while (check)  
+    {
+      Serial.print("1");
+      if(differenceMin <= gyroAngle &&  gyroAngle <= differenceMax){ // 85 <= gyroangle  og  gyroangle <= 95 indtil gyru //
+        check = false;
+      }
+      motors.setSpeeds(200, -200); // drive right 
+      gyroAngle = getTurnAngleInDegrees();
+    }
+  }
+  else if (currentAngle < newAngle) // 0 < 90 ja  
+  {
+    currentAngle += newAngle;
+    while (check) 
+    {
+      if(differenceMin <= gyroAngle &&  gyroAngle <= differenceMax){ // 85 <= gyroangle  og  gyroangle <= 95 indtil gyru //
+        check = false;
+      }
+      motors.setSpeeds(-200, 200); // turn left
+      gyroAngle = getTurnAngleInDegrees(); // opdate the gyroangle
+    }
+    
+  }
+  motors.setSpeeds(0, 0);
+
+  currentAngle = newAngle;
+}
+
+// It move the robot to given positions
+void MoveToPos(int x = 0, int y = 0)
+{
+  // varibel for the vektor
+  int newposx = 0;
+  int newposy = 0;
+  // Dette er bare en float
+  int angle = 0;
+  int dist = 0;
+
+  // check if the positions need too add on or minus with
+  if (x > robotposx)
+  {
+    newposx = x - robotposx;
+  }
+  else
+  {
+    newposx = robotposx - x;
+  }
+
+  if (y > newposy)
+  {
+    newposy = y - robotposy;
+  }
+  else
+  {
+    newposy = robotposy - y;
+  }
+
+  newposx = robotposx + newposx;
+  newposy = robotposy + newposy;
+
+  // angle get round up it float return get convert to int
+  angle = atan(newposy / newposx) * (180 / PI);   // makes angle from the vektor
+  dist = sqrt(pow(newposx, 2) + pow(newposy, 2)); // find length of the vektor
+
+  if (angle > robotangle)
+  {
+    angle = angle - robotangle;
+  }
+  else
+  {
+    angle = robotangle - angle;
+  }
+
+  // Her we put the angle and distance robot too travel
+  // turn
+  forward(dist, 200);
 }
 
 // Avoid collision with a object by going around it, return true when done.
@@ -521,6 +569,9 @@ bool checkTheft()
 
 void Linesensor()
 {
+  // Read line sensor values
+  lineSenors.read(lineSensorValues);
+  
   // detects when the distance to an object is readable
   if (lineSensorValues[0] < 1000 && lineSensorValues[1] < 1000 && lineSensorValues[2] < 1000)
   {
@@ -579,15 +630,21 @@ void setup()
   lineSenors.initThreeSensors();
 }
 
-// unsigned long previusTime = 0;
-
 void loop()
 {
+ turnByAngle(90);
+ delay(2000);
+ turnByAngle(0);
+ delay(2000);
+ turnByAngle(180);
+ delay(2000);
+
   // put your main code here, to run repeatedly:
   // forward(1000, 300);
   // backward(200, 400);
-  Serial.println(checkTheft());
-  delay(30000);
+  // Serial.println(checkTheft());
+  // delay(30000);
+  
 }
 
 // if(millis() - previusTime > 52){
