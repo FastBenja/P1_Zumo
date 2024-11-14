@@ -333,21 +333,15 @@ void MoveToPos(int x = 0, int y = 0)
   newposy = robotposy + newposy;
 
   // angle get round up it float return get convert to int
-  angle = atan(newposy / newposx) * (180 / PI);   // makes angle from the vektor
+  angle = atan2(newposy,newposx) * (180 / PI);   // makes angle from the vektor
   dist = sqrt(pow(newposx, 2) + pow(newposy, 2)); // find length of the vektor
 
-  if (angle > robotangle)
-  {
-    angle = angle - robotangle;
-  }
-  else
-  {
-    angle = robotangle - angle;
-  }
-
+  
   // Her we put the angle and distance robot too travel
   // turn
+  turnByAngle(angle);
   forward(dist, 200);
+  
 }
 
 // Avoid collision with a object by going around it, return true when done.
@@ -566,7 +560,7 @@ bool checkTheft()
     return false;
   }
 }
-
+/*
 void Linesensor()
 {
   // Read line sensor values
@@ -617,7 +611,7 @@ void Linesensor()
     resetEncoders();
   }
 }
-
+*/
 void setup()
 {
   // put your setup code here, to run once:
@@ -632,11 +626,16 @@ void setup()
 
 void loop()
 {
- turnByAngle(90);
+ /*turnByAngle(90);
  delay(2000);
  turnByAngle(0);
  delay(2000);
  turnByAngle(180);
+ delay(2000);*/
+ delay(2000);
+ MoveToPos(51.39);
+ delay(2000);
+ MoveToPos(0,0);
  delay(2000);
 
   // put your main code here, to run repeatedly:
