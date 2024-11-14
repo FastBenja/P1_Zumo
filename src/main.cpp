@@ -4,7 +4,10 @@
 #include <PololuOLED.h>
 
 int speed = 100;
+<<<<<<< HEAD
 int currentAngle = 0;
+=======
+>>>>>>> b1f95d6475cf41b3bac892b61a9fde8d78c25e58
 #define thieveThreshold 1.5
 // this are the postions the robot need to check// lave om på talene senere
 const int check[3][2] = {{20, 47}, {40, 38}, {65, 10}};
@@ -25,7 +28,7 @@ int16_t gyroOffset;
 uint32_t turnAngle = 0;
 int16_t turnRate;
 uint16_t gyroLastUpdate = 0;
-uint16_t lineSensorValues[NUM_SENSORS];
+unsigned int lineSensorValues[NUM_SENSORS];
 
 float wheelCirc = 122.52;
 
@@ -113,7 +116,11 @@ float getDistance()
 void forward(uint16_t dist = 0, uint16_t speed = 0)
 {
   resetEncoders();
+<<<<<<< HEAD
   while (getDistance() <= dist )
+=======
+  while (getDistance() <= dist)
+>>>>>>> b1f95d6475cf41b3bac892b61a9fde8d78c25e58
   {
     /*
     If right is ahead, diff is negative. If right is behind, diff is positive.
@@ -251,6 +258,7 @@ void turnByAngle(int newAngle = 0)
   
   bool check = true;
 
+<<<<<<< HEAD
   int difference = 2;
   int differenceMax = newAngle + difference;   
    int differenceMin = newAngle + difference;  
@@ -258,6 +266,29 @@ void turnByAngle(int newAngle = 0)
   // check if max and min don't go over 360 and under 0
   if(differenceMax > 360){
     differenceMax = differenceMax -360;
+=======
+  int currentconstant = 0;
+  int etellerandet = getTurnAngleInDegrees();
+
+  if (currentconstant >= newconstant)
+  {
+    currentconstant -= newconstant;
+    while (newconstant != etellerandet)
+    {
+      motors.setSpeeds(100, -100);
+      etellerandet = getTurnAngleInDegrees();
+    }
+  }
+  else if (currentconstant < newconstant)
+  {
+    currentconstant += newconstant;
+    while (newconstant != etellerandet)
+    {
+      motors.setSpeeds(-100, 100);
+      etellerandet = getTurnAngleInDegrees();
+    }
+    motors.setSpeeds(0, 0);
+>>>>>>> b1f95d6475cf41b3bac892b61a9fde8d78c25e58
   }
 
   if (differenceMin < 0)
@@ -643,7 +674,11 @@ void loop()
   // backward(200, 400);
   // Serial.println(checkTheft());
   // delay(30000);
+<<<<<<< HEAD
   
+=======
+  Linesensor();
+>>>>>>> b1f95d6475cf41b3bac892b61a9fde8d78c25e58
 }
 
 // if(millis() - previusTime > 52){
