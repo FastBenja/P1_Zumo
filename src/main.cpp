@@ -24,7 +24,7 @@ int16_t gyroOffset;
 uint32_t turnAngle = 0;
 int16_t turnRate;
 uint16_t gyroLastUpdate = 0;
-uint16_t lineSensorValues[NUM_SENSORS];
+unsigned int lineSensorValues[NUM_SENSORS];
 
 float wheelCirc = 122.52;
 
