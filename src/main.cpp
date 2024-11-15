@@ -111,33 +111,7 @@ float getDistance()
  * \param dist Specify the distance that the robot should, move only allows posetive integers.
  * \param speed Specify the speed at which the robot should move, only allows posetive integers.
  */
-void forward(uint16_t dist = 0, uint16_t speed = 0)
-{
-  resetEncoders();
-  while (getDistance() <= dist)
-  {
-    /*
-    If right is ahead, diff is negative. If right is behind, diff is positive.
-    */
-    int diff = encoders.getCountsLeft() - encoders.getCountsRight();
-    // Serial.println(diff);
-    int compSpeed = speed + diff * 0.5;
-    motors.setSpeeds(speed, compSpeed);
-  }
-  stop();
 
-  // convert distance and the angle of robot to x and y coordinates
-  // i stedet for angle skal der bruges "getTurnAngleInDegrees()"
-  robotposx = robotposx + dist * cos(robotangle / (180 / PI)); // ikke færdig
-  robotposy = robotposy + dist * sin(robotangle / (180 / PI));
-
-  // just to check
-  display.clear();               // Clears the OLED display.
-  display.gotoXY(0, 0);          // Sets the position on the OLED, where the message should be printed.
-  display.print(robotposx); // 20                                  // Prints "Obstacle".
-  display.gotoXY(0, 1);          // Sets the position on the OLED, where the next line should be printed.
-  display.print(robotposy); // 46
-}
 
 // Go backwards a distance with a specified speed
 void backward(int dist = 0, int speed = 0)
@@ -170,57 +144,8 @@ void savePos()
   checkposy = robotposy;
 }
 
-// It move the robot to given positions
-void MoveToPos(int x = 0, int y = 0)
-{
-  // varibel for the vektor
-  int newposx = 0;
-  int newposy = 0;
-  // Dette er bare en float
-  int angle = 0;
-  int dist = 0;
 
-  // check if the positions need too add on or minus with
-  if (x > robotposx)
-  {
-    newposx = x - robotposx;
-  }
-  else
-  {
-    newposx = robotposx - x;
-  }
-
-  if (y > newposy)
-  {
-    newposy = y - robotposy;
-  }
-  else
-  {
-    newposy = robotposy - y;
-  }
-
-  newposx = robotposx + newposx;
-  newposy = robotposy + newposy;
-
-  // angle get round up it float return get convert to int
-  angle = atan(newposy / newposx) * (180 / PI);   // makes angle from the vektor
-  dist = sqrt(pow(newposx, 2) + pow(newposy, 2)); // find length of the vektor
-
-  if (angle > robotangle)
-  {
-    angle = angle - robotangle;
-  }
-  else
-  {
-    angle = robotangle - angle;
-  }
-
-  // Her we put the angle and distance robot too travel
-  // turn
-  forward(dist, 200);
-}
-
-// this code just check if method "MoveToPos" Works
+/* this code just check if method "MoveToPos" Works
 void test()
 {
 
@@ -228,7 +153,7 @@ void test()
   {
     MoveToPos(check[0][i], check[1][i]);
   }
-}
+}*/
 
 /* Read the gyro and update the angle.  This should be called as
  frequently as possible while using the gyro to do turns. */
@@ -301,7 +226,7 @@ void turnByAngle(int newAngle = 0)
   
   bool check = true;
 
-  int difference = 2;
+  int difference = 0;
   int differenceMax = newAngle + difference;   
    int differenceMin = newAngle + difference;  
   
@@ -320,11 +245,9 @@ void turnByAngle(int newAngle = 0)
 
   if (currentAngle >= newAngle) // if given angle is lower then old angle  // 0>90// 180>90
   {
-    Serial.print("4");
     currentAngle -= newAngle; // 0-90 // 90-180
     while (check)  
     {
-      Serial.print("1");
       if(differenceMin <= gyroAngle &&  gyroAngle <= differenceMax){ // 85 <= gyroangle  og  gyroangle <= 95 indtil gyru //
         check = false;
       }
@@ -348,6 +271,101 @@ void turnByAngle(int newAngle = 0)
   motors.setSpeeds(0, 0);
 
   currentAngle = newAngle;
+}
+void forward(uint16_t dist = 0, uint16_t speed = 0)
+{
+  resetEncoders();
+  while (getDistance() <= dist)
+  {
+    /*
+    If right is ahead, diff is negative. If right is behind, diff is positive.
+    */
+    int diff = encoders.getCountsLeft() - encoders.getCountsRight();
+    // Serial.println(diff);
+    int compSpeed = speed + diff * 0.5;
+    motors.setSpeeds(speed, compSpeed);
+  }
+  stop();
+
+  // convert distance and the angle of robot to x and y coordinates
+  // i stedet for angle skal der bruges "getTurnAngleInDegrees()"
+  robotposx = robotposx + dist * cos(getTurnAngleInDegrees() / (180 / PI)); // ikke færdig
+  robotposy = robotposy + dist * sin(getTurnAngleInDegrees()  / (180 / PI));
+
+  // just to check
+  display.clear();               // Clears the OLED display.
+  display.gotoXY(0, 0);          // Sets the position on the OLED, where the message should be printed.
+  display.print(robotposx); // 20                                  // Prints "Obstacle".
+  display.gotoXY(0, 1);          // Sets the position on the OLED, where the next line should be printed.
+  display.print(robotposy); // 46
+}
+
+// It move the robot to given positions
+void MoveToPos(int x = 0, int y = 0)
+{
+  // varibel for the vektor
+  int newposx = 0;
+  int newposy = 0;
+  // Dette er bare en float
+  int angle = 0;
+  int dist = 0;
+
+  // check if the positions need too add on or minus with
+  /*if (x > robotposx)
+  {
+    newposx = x - robotposx;
+  }
+  else
+  {
+    newposx = robotposx - x;
+  }
+
+  if (y > newposy)
+  {
+    newposy = y - robotposy;
+  }
+  else
+  {
+    newposy = robotposy - y;
+  }
+
+  newposx = robotposx + newposx;
+  newposy = robotposy + newposy;*/
+
+   newposx = x - robotposx;
+   newposy = y - robotposy;
+
+   
+
+
+  // angle get round up it float return get convert to int
+   angle = atan2(newposy,newposx) * (180 / PI);   // makes angle from the vektor
+    dist = sqrt(pow(newposx, 2) + pow(newposy, 2)); // find length of the vektor
+    if(angle<0){
+    angle = 360 + angle;
+
+    }
+  Serial.println("newposx: ");
+   Serial.println(newposx);
+
+   Serial.println("newposy: ");
+   Serial.println(newposy);
+
+  Serial.println("angle: ");
+  Serial.println(angle);
+  /* den virk med dette men burde ikke bruges if (angle > robotangle)
+  {
+    angle = angle - robotangle;
+  
+  else
+  {
+    angle = robotangle - angle;
+  */
+
+  // Her we put the angle and distance robot too travel
+  // turn
+   turnByAngle(angle);
+  forward(dist, 200);
 }
 
 // Avoid collision with a object by going around it, return true when done.
@@ -632,12 +650,21 @@ void setup()
 
 void loop()
 {
-  turnByAngle(90);
+  /*turnByAngle(90);
   delay(2000);
   turnByAngle(0);
   delay(2000);
   turnByAngle(180);
   delay(2000);
+  
+  */
+
+  MoveToPos(51,30);
+  delay(3000);
+  MoveToPos(0,0);
+  delay(2000);
+  
+  //Serial.println(atan2(30,-51)*(180 / PI));
 }
 
 // if(millis() - previusTime > 52){
