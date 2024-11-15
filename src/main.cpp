@@ -4,10 +4,6 @@
 #include <PololuOLED.h>
 
 int speed = 100;
-<<<<<<< HEAD
-int currentAngle = 0;
-=======
->>>>>>> b1f95d6475cf41b3bac892b61a9fde8d78c25e58
 #define thieveThreshold 1.5
 // this are the postions the robot need to check// lave om på talene senere
 const int check[3][2] = {{20, 47}, {40, 38}, {65, 10}};
@@ -29,6 +25,8 @@ uint32_t turnAngle = 0;
 int16_t turnRate;
 uint16_t gyroLastUpdate = 0;
 unsigned int lineSensorValues[NUM_SENSORS];
+
+int currentAngle = 0;
 
 float wheelCirc = 122.52;
 
@@ -116,11 +114,7 @@ float getDistance()
 void forward(uint16_t dist = 0, uint16_t speed = 0)
 {
   resetEncoders();
-<<<<<<< HEAD
-  while (getDistance() <= dist )
-=======
   while (getDistance() <= dist)
->>>>>>> b1f95d6475cf41b3bac892b61a9fde8d78c25e58
   {
     /*
     If right is ahead, diff is negative. If right is behind, diff is positive.
@@ -176,8 +170,57 @@ void savePos()
   checkposy = robotposy;
 }
 
+// It move the robot to given positions
+void MoveToPos(int x = 0, int y = 0)
+{
+  // varibel for the vektor
+  int newposx = 0;
+  int newposy = 0;
+  // Dette er bare en float
+  int angle = 0;
+  int dist = 0;
 
-/*/ this code just check if method "MoveToPos" Works
+  // check if the positions need too add on or minus with
+  if (x > robotposx)
+  {
+    newposx = x - robotposx;
+  }
+  else
+  {
+    newposx = robotposx - x;
+  }
+
+  if (y > newposy)
+  {
+    newposy = y - robotposy;
+  }
+  else
+  {
+    newposy = robotposy - y;
+  }
+
+  newposx = robotposx + newposx;
+  newposy = robotposy + newposy;
+
+  // angle get round up it float return get convert to int
+  angle = atan(newposy / newposx) * (180 / PI);   // makes angle from the vektor
+  dist = sqrt(pow(newposx, 2) + pow(newposy, 2)); // find length of the vektor
+
+  if (angle > robotangle)
+  {
+    angle = angle - robotangle;
+  }
+  else
+  {
+    angle = robotangle - angle;
+  }
+
+  // Her we put the angle and distance robot too travel
+  // turn
+  forward(dist, 200);
+}
+
+// this code just check if method "MoveToPos" Works
 void test()
 {
 
@@ -185,7 +228,7 @@ void test()
   {
     MoveToPos(check[0][i], check[1][i]);
   }
-}*/
+}
 
 /* Read the gyro and update the angle.  This should be called as
  frequently as possible while using the gyro to do turns. */
@@ -258,7 +301,6 @@ void turnByAngle(int newAngle = 0)
   
   bool check = true;
 
-<<<<<<< HEAD
   int difference = 2;
   int differenceMax = newAngle + difference;   
    int differenceMin = newAngle + difference;  
@@ -266,29 +308,6 @@ void turnByAngle(int newAngle = 0)
   // check if max and min don't go over 360 and under 0
   if(differenceMax > 360){
     differenceMax = differenceMax -360;
-=======
-  int currentconstant = 0;
-  int etellerandet = getTurnAngleInDegrees();
-
-  if (currentconstant >= newconstant)
-  {
-    currentconstant -= newconstant;
-    while (newconstant != etellerandet)
-    {
-      motors.setSpeeds(100, -100);
-      etellerandet = getTurnAngleInDegrees();
-    }
-  }
-  else if (currentconstant < newconstant)
-  {
-    currentconstant += newconstant;
-    while (newconstant != etellerandet)
-    {
-      motors.setSpeeds(-100, 100);
-      etellerandet = getTurnAngleInDegrees();
-    }
-    motors.setSpeeds(0, 0);
->>>>>>> b1f95d6475cf41b3bac892b61a9fde8d78c25e58
   }
 
   if (differenceMin < 0)
@@ -329,50 +348,6 @@ void turnByAngle(int newAngle = 0)
   motors.setSpeeds(0, 0);
 
   currentAngle = newAngle;
-}
-
-// It move the robot to given positions
-void MoveToPos(int x = 0, int y = 0)
-{
-  // varibel for the vektor
-  int newposx = 0;
-  int newposy = 0;
-  // Dette er bare en float
-  int angle = 0;
-  int dist = 0;
-
-  // check if the positions need too add on or minus with
-  if (x > robotposx)
-  {
-    newposx = x - robotposx;
-  }
-  else
-  {
-    newposx = robotposx - x;
-  }
-
-  if (y > newposy)
-  {
-    newposy = y - robotposy;
-  }
-  else
-  {
-    newposy = robotposy - y;
-  }
-
-  newposx = robotposx + newposx;
-  newposy = robotposy + newposy;
-
-  // angle get round up it float return get convert to int
-  angle = atan2(newposy,newposx) * (180 / PI);   // makes angle from the vektor
-  dist = sqrt(pow(newposx, 2) + pow(newposy, 2)); // find length of the vektor
-
-  
-  // Her we put the angle and distance robot too travel
-  // turn
-  turnByAngle(angle);
-  forward(dist, 200);
-  
 }
 
 // Avoid collision with a object by going around it, return true when done.
@@ -591,7 +566,7 @@ bool checkTheft()
     return false;
   }
 }
-/*
+
 void Linesensor()
 {
   // Read line sensor values
@@ -642,7 +617,7 @@ void Linesensor()
     resetEncoders();
   }
 }
-*/
+
 void setup()
 {
   // put your setup code here, to run once:
@@ -657,28 +632,12 @@ void setup()
 
 void loop()
 {
- /*turnByAngle(90);
- delay(2000);
- turnByAngle(0);
- delay(2000);
- turnByAngle(180);
- delay(2000);*/
- delay(2000);
- MoveToPos(51.39);
- delay(2000);
- MoveToPos(0,0);
- delay(2000);
-
-  // put your main code here, to run repeatedly:
-  // forward(1000, 300);
-  // backward(200, 400);
-  // Serial.println(checkTheft());
-  // delay(30000);
-<<<<<<< HEAD
-  
-=======
-  Linesensor();
->>>>>>> b1f95d6475cf41b3bac892b61a9fde8d78c25e58
+  turnByAngle(90);
+  delay(2000);
+  turnByAngle(0);
+  delay(2000);
+  turnByAngle(180);
+  delay(2000);
 }
 
 // if(millis() - previusTime > 52){
