@@ -43,7 +43,7 @@ int checkposy = 0;
  * \param time Duration in ms that the alarm should sound (Best if devisible by 300)
  * otherwise the duration will be prolonged until the time in ms is divisible by 300
  */
-void ALARM(uint32_t time = 3000) 
+void ALARM(uint32_t time = 3000)
 {
   uint32_t startTime = millis();
   while (millis() - startTime < time)
@@ -100,8 +100,8 @@ float getDistance()
   long int countsL = encoders.getCountsLeft();
   long int countsR = encoders.getCountsRight();
 
-  float distanceL = countsL / 900.0 * (wheelCirc/10);
-  float distanceR = countsR / 900.0 * (wheelCirc/10);
+  float distanceL = countsL / 900.0 * (wheelCirc / 10);
+  float distanceR = countsR / 900.0 * (wheelCirc / 10);
 
   return (distanceL + distanceR) / 2;
 }
@@ -111,7 +111,6 @@ float getDistance()
  * \param dist Specify the distance that the robot should, move only allows posetive integers.
  * \param speed Specify the speed at which the robot should move, only allows posetive integers.
  */
-
 
 // Go backwards a distance with a specified speed
 void backward(int dist = 0, int speed = 0)
@@ -143,7 +142,6 @@ void savePos()
   checkposx = robotposx;
   checkposy = robotposy;
 }
-
 
 /* this code just check if method "MoveToPos" Works
 void test()
@@ -184,6 +182,14 @@ void turnSensorUpdate()
   turnAngle += (int64_t)d * 14680064 / 17578125;
 }
 
+// This should be called to set the starting point for measuring
+// a turn.  After calling this, turnAngle will be 0.
+void turnSensorReset()
+{
+  gyroLastUpdate = micros();
+  turnAngle = 0;
+}
+
 // Robot turns around itself with a random angle.
 void turnRandomAng()
 {
@@ -221,57 +227,55 @@ uint32_t getTurnAngleInDegrees()
   return (((uint32_t)turnAngle >> 16) * 360) >> 16;
 }
 
-void turnByAngle(int newAngle = 0)
+/**
+ * \brief Takes an angle and turns the robot to face that angle relative to the starting position.
+ * \param angleToTurn Specify the angle to turn, only positive integers between 0 and 359
+ */
+void turnByAngleNew(int angleToTurn = 0)
 {
-  
-  bool check = true;
-
-  int difference = 0;
-  int differenceMax = newAngle + difference;   
-   int differenceMin = newAngle + difference;  
-  
-  // check if max and min don't go over 360 and under 0
-  if(differenceMax > 360){
-    differenceMax = differenceMax -360;
+  // Return if parm is outside allowed spectrum
+  if (angleToTurn < 0 || angleToTurn > 359)
+  {
+    return;
   }
 
-  if (differenceMin < 0)
-  {
-    differenceMin = 360 + difference;
-    
-  }
-  
-  int gyroAngle = getTurnAngleInDegrees(); //save angle from the gyro
+  // Init and reset
+  turnSensorReset();
+  int ang = 0;
 
-  if (currentAngle >= newAngle) // if given angle is lower then old angle  // 0>90// 180>90
+  // While not in correct orientation
+  while (angleToTurn != ang)
   {
-    currentAngle -= newAngle; // 0-90 // 90-180
-    while (check)  
+    ang = getTurnAngleInDegrees(); // Get angle
+
+    if (angleToTurn < 180) // Decide on direction
     {
-      if(differenceMin <= gyroAngle &&  gyroAngle <= differenceMax){ // 85 <= gyroangle  og  gyroangle <= 95 indtil gyru //
-        check = false;
+      if ((angleToTurn - ang) > 40) // Decrease speed
+      {
+        motors.setSpeeds(-200, 200); // Drive left
       }
-      motors.setSpeeds(200, -200); // drive right 
-      gyroAngle = getTurnAngleInDegrees();
+      else
+      {
+        motors.setSpeeds(-100, 100);
+      }
+    }
+    else
+    {
+      if ((ang - angleToTurn) > 40) // Decrease speed
+      {
+        motors.setSpeeds(200, -200); // Drive right
+      }
+      else
+      {
+        motors.setSpeeds(100, -100);
+      }
     }
   }
-  else if (currentAngle < newAngle) // 0 < 90 ja  
-  {
-    currentAngle += newAngle;
-    while (check) 
-    {
-      if(differenceMin <= gyroAngle &&  gyroAngle <= differenceMax){ // 85 <= gyroangle  og  gyroangle <= 95 indtil gyru //
-        check = false;
-      }
-      motors.setSpeeds(-200, 200); // turn left
-      gyroAngle = getTurnAngleInDegrees(); // opdate the gyroangle
-    }
-    
-  }
-  motors.setSpeeds(0, 0);
 
-  currentAngle = newAngle;
+  motors.setSpeeds(0, 0);                                  // Stop
+  Serial.println("Turned to: " + String(ang) + "Degrees"); // Print resulting angle
 }
+
 void forward(uint16_t dist = 0, uint16_t speed = 0)
 {
   resetEncoders();
@@ -290,13 +294,13 @@ void forward(uint16_t dist = 0, uint16_t speed = 0)
   // convert distance and the angle of robot to x and y coordinates
   // i stedet for angle skal der bruges "getTurnAngleInDegrees()"
   robotposx = robotposx + dist * cos(getTurnAngleInDegrees() / (180 / PI)); // ikke færdig
-  robotposy = robotposy + dist * sin(getTurnAngleInDegrees()  / (180 / PI));
+  robotposy = robotposy + dist * sin(getTurnAngleInDegrees() / (180 / PI));
 
   // just to check
-  display.clear();               // Clears the OLED display.
-  display.gotoXY(0, 0);          // Sets the position on the OLED, where the message should be printed.
+  display.clear();          // Clears the OLED display.
+  display.gotoXY(0, 0);     // Sets the position on the OLED, where the message should be printed.
   display.print(robotposx); // 20                                  // Prints "Obstacle".
-  display.gotoXY(0, 1);          // Sets the position on the OLED, where the next line should be printed.
+  display.gotoXY(0, 1);     // Sets the position on the OLED, where the next line should be printed.
   display.print(robotposy); // 46
 }
 
@@ -332,31 +336,28 @@ void MoveToPos(int x = 0, int y = 0)
   newposx = robotposx + newposx;
   newposy = robotposy + newposy;*/
 
-   newposx = x - robotposx;
-   newposy = y - robotposy;
-
-   
-
+  newposx = x - robotposx;
+  newposy = y - robotposy;
 
   // angle get round up it float return get convert to int
-   angle = atan2(newposy,newposx) * (180 / PI);   // makes angle from the vektor
-    dist = sqrt(pow(newposx, 2) + pow(newposy, 2)); // find length of the vektor
-    if(angle<0){
+  angle = atan2(newposy, newposx) * (180 / PI);   // makes angle from the vektor
+  dist = sqrt(pow(newposx, 2) + pow(newposy, 2)); // find length of the vektor
+  if (angle < 0)
+  {
     angle = 360 + angle;
-
-    }
+  }
   Serial.println("newposx: ");
-   Serial.println(newposx);
+  Serial.println(newposx);
 
-   Serial.println("newposy: ");
-   Serial.println(newposy);
+  Serial.println("newposy: ");
+  Serial.println(newposy);
 
   Serial.println("angle: ");
   Serial.println(angle);
   /* den virk med dette men burde ikke bruges if (angle > robotangle)
   {
     angle = angle - robotangle;
-  
+
   else
   {
     angle = robotangle - angle;
@@ -364,7 +365,7 @@ void MoveToPos(int x = 0, int y = 0)
 
   // Her we put the angle and distance robot too travel
   // turn
-   turnByAngle(angle);
+  turnByAngleNew(angle);
   forward(dist, 200);
 }
 
@@ -378,7 +379,7 @@ void avoid()
     stop();
     delay(50);
 
-    turnByAngle(90);
+    turnByAngleNew(90);
     stop();
     delay(50);
 
@@ -386,7 +387,7 @@ void avoid()
     stop();
     delay(50);
 
-    turnByAngle(270);
+    turnByAngleNew(270);
     stop();
     delay(50);
 
@@ -394,7 +395,7 @@ void avoid()
     stop();
     delay(50);
 
-    turnByAngle(270);
+    turnByAngleNew(270);
     stop();
     delay(50);
 
@@ -402,7 +403,7 @@ void avoid()
     stop();
     delay(50);
 
-    turnByAngle(90);
+    turnByAngleNew(90);
     stop();
     delay(50);
 
@@ -422,14 +423,6 @@ void avoid()
  **/
 void turnArc(bool dir = 0, int radius = 100, int speed = 100)
 {
-}
-
-// This should be called to set the starting point for measuring
-// a turn.  After calling this, turnAngle will be 0.
-void turnSensorReset()
-{
-  gyroLastUpdate = micros();
-  turnAngle = 0;
 }
 
 /*
@@ -477,7 +470,7 @@ void turnSensorSetup()
 void turnRandom()
 {
   int randomNumber = random(10, 359);
-  turnByAngle(randomNumber);
+  turnByAngleNew(randomNumber);
   stop();
   delay(1000);
 }
@@ -589,7 +582,7 @@ void Linesensor()
 {
   // Read line sensor values
   lineSenors.read(lineSensorValues);
-  
+
   // detects when the distance to an object is readable
   if (lineSensorValues[0] < 1000 && lineSensorValues[1] < 1000 && lineSensorValues[2] < 1000)
   {
@@ -656,15 +649,21 @@ void loop()
   delay(2000);
   turnByAngle(180);
   delay(2000);
-  
+
   */
 
-  MoveToPos(51,30);
+  turnByAngleNew(90);
   delay(3000);
-  MoveToPos(0,0);
-  delay(2000);
-  
-  //Serial.println(atan2(30,-51)*(180 / PI));
+  turnByAngleNew(180);
+  delay(3000);
+  turnByAngleNew(270);
+  delay(3000);
+  turnByAngleNew(45);
+  delay(3000);
+  turnByAngleNew(45);
+  delay(3000);
+
+  // Serial.println(atan2(30,-51)*(180 / PI));
 }
 
 // if(millis() - previusTime > 52){
