@@ -4,7 +4,7 @@
 #include <PololuOLED.h>
 
 int speed = 100;
-#define thieveThreshold 1.6
+#define thieveThreshold 4 // Was 1.6
 #define lineThreshold 1000
 #define objThreshold 6
 // this are the postions the robot need to check// lave om på talene senere
@@ -37,6 +37,9 @@ int robotangle = 0;
 int checkposx = 0;
 int checkposy = 0;
 
+int avoidDist = 15;
+float checkDist = 0;
+
 // Function definitions:
 void ALARM(uint32_t);
 int offsetAngValue(int, int);
@@ -56,6 +59,8 @@ void turnSensorReset();
 void turnSensorSetup();
 bool checkTheft();
 void checkSurroundings();
+void avoid();
+void newAvoid();
 
 void setup()
 {
@@ -65,28 +70,32 @@ void setup()
   turnSensorSetup();
   encoders.init();
   proximitySensor.initFrontSensor();
+  uint16_t customBrightnessLevels[] = {1, 5, 10, 15, 30, 45};
+  proximitySensor.setBrightnessLevels(customBrightnessLevels, 6);
   // proximitySensor.setBrightnessLevels(proxBrightnesses,6);
   lineSenors.initThreeSensors();
 }
 
 void loop()
 {
-  /* proximitySensor.read();
-   int leftReading = proximitySensor.countsFrontWithLeftLeds();
-   int rightReading = proximitySensor.countsFrontWithRightLeds();
-   Serial.println("Left: " + String(leftReading) + "Right: " + String(rightReading));
-   delay(200);
-   */
-  /*   forward(200, 150);
-    int rand = random(10, 350);
-    turnByAngleNew(rand);
+  /* forward(30, 150);
+  int rand = random(10, 350);
+  turnByAngleNew(rand);
 
-    if (millis() > 180000)
-    {
-      MoveToPos(charger[0], charger[1]);
-    } */
-  checkTheft();
-  delay(10000);
+  if (millis() > 180000)
+  {
+    MoveToPos(charger[0], charger[1]);
+  } */
+ newAvoid();
+ delay(5000);
+}
+
+void newAvoid(){
+  turnByAngleNew(20);
+  forward(25,150);
+  turnByAngleNew(310);
+  forward(25,150);
+  turnByAngleNew(20);
 }
 
 /**
@@ -163,10 +172,8 @@ void backward(int dist = 0, int speed = 0)
   resetEncoders();
   while (getDistance() >= -dist)
   {
-    /*
-        If right is ahead, diff is negative. If right is behind, diff is positive.
-        */
-    int diff = encoders.getCountsLeft() - encoders.getCountsRight();
+    // If right is ahead, diff is negative. If right is behind, diff is positive.
+    int diff = encoders.getCountsRight() - encoders.getCountsLeft();
     // Serial.println(diff);
     int compSpeed = speed + diff * 0.5;
     motors.setSpeeds(-speed, -compSpeed);
@@ -315,7 +322,7 @@ bool checkTheft()
   uint32_t startAngle = getTurnAngleInDegrees();
 
   // Begin rotation
-  motors.setSpeeds(-90, 90);
+  motors.setSpeeds(-150, 150);
 
   // Record a value for each 40 degrees (9 measurements) save it in base list.
   // Next repeat the measurement but save the result in test list.
@@ -324,18 +331,20 @@ bool checkTheft()
   {
     // Update the offsat angle and print it.
     angle = offsetAngValue(getTurnAngleInDegrees(), startAngle);
-    //Serial.println("Vinkel: " + String(angle) + " numTurns: " + String(numTurns) + " Turn angle in degrees: " + String(getTurnAngleInDegrees()) + " StartAngle: " + startAngle);
+    // Serial.println("Vinkel: " + String(angle) + " numTurns: " + String(numTurns) + " Turn angle in degrees: " + String(getTurnAngleInDegrees()) + " StartAngle: " + startAngle);
 
     // Count number of full rotations
-    if(angle==180){
+    if (angle == 180)
+    {
       halfway = true;
-    }    
+    }
     if (halfway && angle == 0)
     {
       numTurns++;
     }
-    if(angle == 0){
-      halfway=false;
+    if (angle == 0)
+    {
+      halfway = false;
     }
 
     // Store reading from proximity sensor.
@@ -410,7 +419,8 @@ bool checkTheft()
 void forward(uint16_t dist = 0, uint16_t speed = 0)
 {
   resetEncoders();
-  while (getDistance() <= dist)
+  checkDist = 0;
+  while (checkDist + getDistance() <= dist)
   {
     long leftEncCount = encoders.getCountsLeft();
     long rightEncCount = encoders.getCountsRight();
@@ -422,7 +432,7 @@ void forward(uint16_t dist = 0, uint16_t speed = 0)
     */
     int diff = (encoders.getCountsLeft() - leftEncCount) - (encoders.getCountsRight() - rightEncCount);
     // Serial.println(diff);
-    int compSpeed = speed + diff * 0.5;
+    int compSpeed = speed + diff * 5;
     motors.setSpeeds(speed, compSpeed);
   }
   stop();
@@ -445,7 +455,8 @@ void forward(uint16_t dist = 0, uint16_t speed = 0)
 // Avoid collision with a object by going around it, return true when done.
 void avoid()
 {
-  backward(30, 100);
+  checkDist += getDistance();
+  backward(3, 100);
   stop();
   delay(50);
 
@@ -453,7 +464,7 @@ void avoid()
   stop();
   delay(50);
 
-  forward(30, 100);
+  forward(10, 100);
   stop();
   delay(50);
 
@@ -461,7 +472,7 @@ void avoid()
   stop();
   delay(50);
 
-  forward(70, 100);
+  forward(avoidDist, 100);
   stop();
   delay(50);
 
@@ -469,7 +480,7 @@ void avoid()
   stop();
   delay(50);
 
-  forward(30, 100);
+  forward(10, 100);
   stop();
   delay(50);
 
@@ -477,9 +488,11 @@ void avoid()
   stop();
   delay(50);
 
-  forward(30, 100);
+  forward(3, 100);
   stop();
   delay(50);
+  checkDist += avoidDist;
+  resetEncoders();
 }
 
 // Robot detects if any object is infront of it, returns true if a object is present.
