@@ -4,9 +4,9 @@
 #include <PololuOLED.h>
 
 int speed = 100;
-#define thieveThreshold 10
+#define thieveThreshold 1.6
 #define lineThreshold 1000
-#define objThreshold 10
+#define objThreshold 6
 // this are the postions the robot need to check// lave om på talene senere
 const int check[3][2] = {{20, 47}, {40, 38}, {65, 10}};
 const int charger[2] = {100, 100};
@@ -19,7 +19,6 @@ Zumo32U4Encoders encoders;
 Zumo32U4Motors motors;
 Zumo32U4ProximitySensors proximitySensor;
 Zumo32U4LineSensors lineSenors;
-// Zumo32U4FastGPIO fastGio;
 
 // variables for gyro
 int16_t gyroOffset = 0;
@@ -72,6 +71,12 @@ void setup()
 
 void loop()
 {
+ /* proximitySensor.read();
+  int leftReading = proximitySensor.countsFrontWithLeftLeds();
+  int rightReading = proximitySensor.countsFrontWithRightLeds();
+  Serial.println("Left: " + String(leftReading) + "Right: " + String(rightReading));
+  delay(200);
+  */
   forward(200, 150);
   int rand = random(10, 350);
   turnByAngleNew(rand);
@@ -80,6 +85,7 @@ void loop()
   {
     MoveToPos(charger[0], charger[1]);
   }
+
 }
 
 /**
@@ -303,7 +309,7 @@ void turnByAngleNew(int angleToTurn = 0)
 bool checkTheft()
 {
   // Initialise variables
-  int base[15], test[15];
+  int base[9], test[9];
   uint32_t angle;
   uint8_t numTurns = 0;
   float error = 0;
@@ -337,14 +343,14 @@ bool checkTheft()
     }
 
     // Store reading from proximity sensor.
-    if (angle % 24 == 0 && stepNoted == false)
+    if (angle % 40 == 0 && stepNoted == false)
     {
       // Reads values for the front proximity sensor, if there is an object in range of the left or right IR light.
       proximitySensor.read();
       // Add the two readings for an avg.
       int proxReading = (proximitySensor.countsFrontWithLeftLeds() + proximitySensor.countsFrontWithRightLeds());
       stepNoted = true;
-      int index = angle / 24;
+      int index = angle / 40;
       // Store in correct array
       if (numTurns == 0)
       {
@@ -367,25 +373,25 @@ bool checkTheft()
 
   // Print all the recorded values
   Serial.println("Base list:");
-  for (int j = 0; j < 15; j++)
+  for (int j = 0; j < 9; j++)
   {
     Serial.println(String(j) + ": " + String(int(base[j])));
   }
   Serial.println();
 
   Serial.println("Test list:");
-  for (int j = 0; j < 15; j++)
+  for (int j = 0; j < 9; j++)
   {
     Serial.println(String(j) + ": " + String(int(test[j])));
   }
   Serial.println();
 
   // Compare the two lists and calculate a mean deviation, store in error var. and print it
-  for (int i = 0; i < 15; i++)
+  for (int i = 0; i < 9; i++)
   {
     error += abs(base[i] - test[i]);
   }
-  error = error / 15;
+  error = error / 9;
   Serial.println("Error: " + String(error));
 
   // Compare measurements with allowed error and return based on result
@@ -420,8 +426,8 @@ void forward(uint16_t dist = 0, uint16_t speed = 0)
 
   // convert distance and the angle of robot to x and y coordinates
   // i stedet for angle skal der bruges "getTurnAngleInDegrees()"
-  robotposx = robotposx + dist * cos(getTurnAngleInDegrees() / (180 / PI)); // ikke færdig
-  robotposy = robotposy + dist * sin(getTurnAngleInDegrees() / (180 / PI));
+  robotposx = robotposx + dist * cos(robotangle / (180 / PI)); // ikke færdig
+  robotposy = robotposy + dist * sin(robotangle / (180 / PI));
 
   // just to check
   /*
@@ -563,7 +569,7 @@ void linesensor()
 void checkSurroundings()
 {
   linesensor();
-  //detectObject();
+  detectObject();
 }
 
 // It move the robot to given positions
