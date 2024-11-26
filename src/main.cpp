@@ -71,21 +71,22 @@ void setup()
 
 void loop()
 {
- /* proximitySensor.read();
-  int leftReading = proximitySensor.countsFrontWithLeftLeds();
-  int rightReading = proximitySensor.countsFrontWithRightLeds();
-  Serial.println("Left: " + String(leftReading) + "Right: " + String(rightReading));
-  delay(200);
-  */
-  forward(200, 150);
-  int rand = random(10, 350);
-  turnByAngleNew(rand);
+  /* proximitySensor.read();
+   int leftReading = proximitySensor.countsFrontWithLeftLeds();
+   int rightReading = proximitySensor.countsFrontWithRightLeds();
+   Serial.println("Left: " + String(leftReading) + "Right: " + String(rightReading));
+   delay(200);
+   */
+  /*   forward(200, 150);
+    int rand = random(10, 350);
+    turnByAngleNew(rand);
 
-  if (millis() > 180000)
-  {
-    MoveToPos(charger[0], charger[1]);
-  }
-
+    if (millis() > 180000)
+    {
+      MoveToPos(charger[0], charger[1]);
+    } */
+  checkTheft();
+  delay(10000);
 }
 
 /**
@@ -155,12 +156,6 @@ float getDistance()
 
   return (distanceL + distanceR) / 2;
 }
-
-/**
- * \brief Go forward a distance with a specified speed
- * \param dist Specify the distance that the robot should, move only allows posetive integers.
- * \param speed Specify the speed at which the robot should move, only allows posetive integers.
- */
 
 // Go backwards a distance with a specified speed
 void backward(int dist = 0, int speed = 0)
@@ -310,36 +305,37 @@ bool checkTheft()
 {
   // Initialise variables
   int base[9], test[9];
-  uint32_t angle;
+  uint32_t angle = 0;
   uint8_t numTurns = 0;
   float error = 0;
   bool stepNoted = false;
-  bool turnNoted = false;
+  bool halfway = false;
 
   // Store the initial angle, used for offset.
   uint32_t startAngle = getTurnAngleInDegrees();
 
   // Begin rotation
-  motors.setSpeeds(-120, 120);
+  motors.setSpeeds(-90, 90);
 
-  // Record a value for each 24 degrees (15 measurements) save it in base list.
+  // Record a value for each 40 degrees (9 measurements) save it in base list.
   // Next repeat the measurement but save the result in test list.
 
-  while (numTurns <= 1)
+  while (numTurns < 2)
   {
     // Update the offsat angle and print it.
     angle = offsetAngValue(getTurnAngleInDegrees(), startAngle);
-    // Serial.println("Vinkel: " + String(angle));
+    //Serial.println("Vinkel: " + String(angle) + " numTurns: " + String(numTurns) + " Turn angle in degrees: " + String(getTurnAngleInDegrees()) + " StartAngle: " + startAngle);
 
     // Count number of full rotations
-    if (angle == 355 && turnNoted == false)
+    if(angle==180){
+      halfway = true;
+    }    
+    if (halfway && angle == 0)
     {
-      turnNoted = true;
       numTurns++;
     }
-    else if (angle == 0)
-    {
-      turnNoted = false;
+    if(angle == 0){
+      halfway=false;
     }
 
     // Store reading from proximity sensor.
@@ -367,7 +363,6 @@ bool checkTheft()
       stepNoted = false;
     }
   }
-
   // After all measurements have been taken, stop the motion
   stop();
 
@@ -393,6 +388,9 @@ bool checkTheft()
   }
   error = error / 9;
   Serial.println("Error: " + String(error));
+  display.clear();      // Clears the OLED display.
+  display.gotoXY(0, 0); // Sets the position on the OLED, where the message should be printed.
+  display.print(String(error, 3));
 
   // Compare measurements with allowed error and return based on result
   if (error > thieveThreshold)
@@ -404,6 +402,11 @@ bool checkTheft()
   return false;
 }
 
+/**
+ * \brief Go forward a distance with a specified speed
+ * \param dist Specify the distance that the robot should, move only allows posetive integers.
+ * \param speed Specify the speed at which the robot should move, only allows posetive integers.
+ */
 void forward(uint16_t dist = 0, uint16_t speed = 0)
 {
   resetEncoders();
@@ -411,13 +414,13 @@ void forward(uint16_t dist = 0, uint16_t speed = 0)
   {
     long leftEncCount = encoders.getCountsLeft();
     long rightEncCount = encoders.getCountsRight();
-    
+
     checkSurroundings();
 
     /*
     If right is ahead, diff is negative. If right is behind, diff is positive.
     */
-    int diff = (encoders.getCountsLeft()-leftEncCount) - (encoders.getCountsRight()-rightEncCount);
+    int diff = (encoders.getCountsLeft() - leftEncCount) - (encoders.getCountsRight() - rightEncCount);
     // Serial.println(diff);
     int compSpeed = speed + diff * 0.5;
     motors.setSpeeds(speed, compSpeed);
