@@ -7,6 +7,8 @@ int speed = 100;
 #define thieveThreshold 4 // Was 1.6
 #define lineThreshold 1000
 #define objThreshold 6
+#define angularError 2
+
 // this are the postions the robot need to check// lave om på talene senere
 const int check[3][2] = {{20, 47}, {40, 38}, {65, 10}};
 const int charger[2] = {100, 100};
@@ -28,6 +30,9 @@ uint16_t gyroLastUpdate = 0;
 unsigned int lineSensorValues[3];
 
 float wheelCirc = 122.52;
+
+// Start values for mag reading limits
+int16_t maxX = -10000, maxY = 0, minX = 0, minY = 10000;
 
 // Postion of the robot
 int robotposx = 0;
@@ -61,11 +66,17 @@ bool checkTheft();
 void checkSurroundings();
 void avoid();
 void newAvoid();
+float calculateHeading(int16_t, int16_t, int16_t, int16_t, int16_t, int16_t);
+void calibrateMag(int, int);
+void turnByMag(int16_t);
+float getMagHeading(int);
 
 void setup()
 {
   // put your setup code here, to run once:
   Serial.begin(9600);
+  Wire.begin();
+  imu.enableDefault();
   display.init();
   turnSensorSetup();
   encoders.init();
@@ -74,27 +85,43 @@ void setup()
   proximitySensor.setBrightnessLevels(customBrightnessLevels, 6);
   // proximitySensor.setBrightnessLevels(proxBrightnesses,6);
   lineSenors.initThreeSensors();
+  buttonA.waitForButton();
+  delay(2000);
+  calibrateMag(4, 20);
 }
 
+float mag[200];
+int ang[200];
+int i = 0;
 void loop()
 {
-  /* forward(30, 150);
-  int rand = random(10, 350);
-  turnByAngleNew(rand);
+/*   mag[i] = getMagHeading(5);
+  turnByAngleNew(90);
+  ang[i] = ang[i - 1] + 90;
 
-  if (millis() > 180000)
+  if (i>20)
   {
-    MoveToPos(charger[0], charger[1]);
-  } */
- newAvoid();
- delay(5000);
+    buttonA.waitForPress();
+    for (int n = 0; n < i; n++)
+    {
+      Serial.println('$' + String(mag[n]) + ' ' + String(ang[n]) + ';');
+      delay(2);
+    }
+  }
+
+  delay(2000);
+  i++; */
+  
+  Serial.println('$' + String(getMagHeading(1)) + ';');
+  delay(10);
 }
 
-void newAvoid(){
+void newAvoid()
+{
   turnByAngleNew(20);
-  forward(25,150);
+  forward(25, 150);
   turnByAngleNew(310);
-  forward(25,150);
+  forward(25, 150);
   turnByAngleNew(20);
 }
 
@@ -261,7 +288,7 @@ uint32_t getTurnAngleInDegrees()
  */
 void turnByAngleNew(int angleToTurn = 0)
 {
-  // Return if parm is outside allowed spectrum
+  // Return if parm is outside allowed range
   if (angleToTurn < 0 || angleToTurn > 359)
   {
     return;
@@ -709,4 +736,115 @@ void turnRandom()
   turnByAngleNew(randomNumber);
   stop();
   delay(1000);
+}
+
+// Function to convert magnetometer readings to degrees off North
+float calculateHeading(int16_t magX, int16_t magY, int16_t xMin, int16_t xMax, int16_t yMin, int16_t yMax)
+{
+  // Normalize the X and Y values to the range -1 to 1
+  float normX = 2 * (magX - xMin) / (xMax - xMin) - 1;
+  float normY = 2 * (magY - yMin) / (yMax - yMin) - 1;
+
+  // Calculate the heading in radians
+  float heading = atan2(normY, normX);
+
+  // Convert radians to degrees
+  float headingDegrees = heading * (180.0 / M_PI);
+
+  // Normalize to 0-360 degrees
+  if (headingDegrees < 0)
+  {
+    headingDegrees += 360.0;
+  }
+
+  return headingDegrees;
+}
+
+void turnByMag(int angleToTurn)
+{
+  // Wait for stationarry and take inital mag measurement
+  delay(2000);
+  float initHead = getMagHeading(20);
+  Serial.println("init Heading: " + String(initHead));
+
+  // Turn with gyro
+  turnByAngleNew(angleToTurn);
+
+  // Wait for stationary and take new mag measurement
+  delay(2000);
+  float newHead = getMagHeading(20);
+  Serial.println("new Heading: " + String(newHead));
+
+  // Calculate error
+  float error = (newHead - initHead) - angleToTurn;
+  Serial.println('$' + String(angleToTurn) + ' ' + String(error) + ' ' + String(newHead) + ';');
+
+  if (abs(error) > angularError && error < 0)
+  {
+    error -= 360;
+    turnByMag(int(error));
+    return;
+  }
+  if (abs(error) > angularError && error > 0)
+  {
+    turnByMag(int(error));
+    return;
+  }
+}
+
+void calibrateMag(int j, int n)
+{
+  for (int i = 0; i < j; i++)
+  {
+    int32_t x, y;
+    // Wait for stationary and take new mag measurement
+    delay(2000);
+   // for (int i = 0; i < n; i++)
+   //{
+      while (!imu.magDataReady())
+      {
+      }
+      imu.readMag();
+      x = imu.m.x;
+      y = imu.m.y;
+      //Serial.println('$' + String(imu.m.x) + ' ' + String(imu.m.y) + ' ' + String(0) + ' ' + String(minX) + ' ' + String(maxX) + ' ' + String(minY) + ' ' + String(maxY) + ';');
+   // }
+    if (x > maxX)
+    {
+      maxX = x;
+    }
+    if (y > maxY)
+    {
+      maxY = y;
+    }
+    if (x < minX)
+    {
+      minX = x;
+    }
+    if (y < minY)
+    {
+      minY = y;
+    }
+
+    turnByAngleNew(90);
+  }
+}
+
+float getMagHeading(int n)
+{
+  uint32_t x, y;
+  float head;
+//  for (int i = 0; i < n; i++)
+//  {
+    while (!imu.magDataReady())
+    {
+    }
+    imu.readMag();
+    x = imu.m.x;
+    y = imu.m.y;
+    //Serial.println('$' + String(imu.m.x) + ' ' + String(imu.m.y) + ' ' + String(head) + ' ' + String(minX) + ' ' + String(maxX) + ' ' + String(minY) + ' ' + String(maxY) + ';');
+//  }
+  head = calculateHeading(x, y, minX, maxX, minY, maxY);
+  //Serial.println('$' + String(x) + ' ' + String(y) + ' ' + String(head) + ' ' + String(minX) + ' ' + String(maxX) + ' ' + String(minY) + ' ' + String(maxY) + ';');
+  return head;
 }
