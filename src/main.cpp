@@ -6,12 +6,12 @@
 int speed = 100;
 #define thieveThreshold 4 // Was 1.6
 #define lineThreshold 1000
-#define objThreshold 6
+#define objThreshold 5
 // this are the postions the robot need to check// lave om på talene senere
 const int check[3][2] = {{20, 47}, {40, 38}, {65, 10}};
 const int charger[2] = {100, 100};
 
-Zumo32U4LCD display;
+Zumo32U4OLED display;
 Zumo32U4IMU imu;
 Zumo32U4ButtonA buttonA;
 Zumo32U4Buzzer buzzer;
@@ -78,16 +78,7 @@ void setup()
 
 void loop()
 {
-  /* forward(30, 150);
-  int rand = random(10, 350);
-  turnByAngleNew(rand);
-
-  if (millis() > 180000)
-  {
-    MoveToPos(charger[0], charger[1]);
-  } */
- newAvoid();
- delay(5000);
+  
 }
 
 void newAvoid(){
@@ -109,13 +100,13 @@ void ALARM(uint32_t time = 3000)
   while (millis() - startTime < time)
   {
     buzzer.playFrequency(5000, 300, 10);
-    while (buzzer.isPlaying())
-    {
-    }
+    ledRed(1);
+    ledYellow(1);
+    ledGreen(1);
     buzzer.playFrequency(6000, 300, 10);
-    while (buzzer.isPlaying())
-    {
-    }
+    ledRed(0);
+    ledYellow(0);
+    ledGreen(0);
   }
 }
 
