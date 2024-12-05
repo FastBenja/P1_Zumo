@@ -4,7 +4,7 @@
 #include <PololuOLED.h>
 
 int speed = 100;
-#define thieveThreshold 4 // Was 1.6
+#define thieveThreshold 2 // Was 1.6
 #define lineThreshold 1000
 #define objThreshold 5
 // this are the postions the robot need to check// lave om på talene senere
@@ -78,7 +78,8 @@ void setup()
 
 void loop()
 {
- 
+ MoveToPos(10,10);
+ delay(1000);
 }
 
 void newAvoid(){
