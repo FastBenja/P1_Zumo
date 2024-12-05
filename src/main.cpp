@@ -78,7 +78,7 @@ void setup()
 
 void loop()
 {
-  
+ 
 }
 
 void newAvoid(){
@@ -99,14 +99,17 @@ void ALARM(uint32_t time = 3000)
   uint32_t startTime = millis();
   while (millis() - startTime < time)
   {
+    Serial.println("ALARM!");
     buzzer.playFrequency(5000, 300, 10);
     ledRed(1);
     ledYellow(1);
     ledGreen(1);
+    delay(200);
     buzzer.playFrequency(6000, 300, 10);
     ledRed(0);
     ledYellow(0);
     ledGreen(0);
+    delay(200);
   }
 }
 
