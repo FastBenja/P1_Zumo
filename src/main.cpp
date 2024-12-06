@@ -31,8 +31,6 @@ unsigned int lineSensorValues[3];
 float wheelCirc = 122.52/10;
 float cpr = 909.7;
 
-int food = 0;
-
 // Postion of the robot
 int robotposx = 0;
 int robotposy = 0;
@@ -83,32 +81,12 @@ void setup()
 
 void loop()
 {
-
-    Serial.println("Hello World");
-/**/ forward(30, 150);
-    delay(2000);
-  /*int rand = random(10, 350);
-  turnByAngleNew(rand);
-
-  if (millis() > 30000)
-  {
-    MoveToPos(charger[0], charger[1]);
-    motors.setSpeeds(0,0);
-    delay(2000);
-  }*/
-
- /*MoveToPos(20,20);
- delay(2000);
- MoveToPos(0,0);
- delay(2000);*/
- 
- 
-
- 
-
- MoveToPos(10,10);
- delay(1000);
-
+  MoveToPos(40,40);
+  delay(1000);
+  MoveToPos(10,10);
+  delay(1000);
+  MoveToPos(20,20);
+  delay(1000);
 }
 
 void newAvoid(){
@@ -354,7 +332,7 @@ bool checkTheft() // kordnate
   //uint32_t startAngle = getTurnAngleInDegrees();
 
   // Begin rotation
-  motors.setSpeeds(-100, 100);
+  motors.setSpeeds(-200, 200);
 
   // Record a value for each 40 degrees (9 measurements) save it in base list.
   // Next repeat the measurement but save the result in test list.
@@ -816,7 +794,7 @@ void MoveToPos(int x = 0, int y = 0)
   // Her we put the angle and distance robot too travel
   // turn
   turnByAngleNew(angle);
-  forward2(dist, 200);
+  forward(dist, 200);
 }
 
 /** \brief Robot turns right or left with a specified radius, angle and speed.
