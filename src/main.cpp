@@ -5,9 +5,9 @@
 
 
 int speed = 100;
-#define thieveThreshold 4 // Was 1.6
+#define thieveThreshold 2 // Was 1.6
 #define lineThreshold 1000
-#define objThreshold 6
+#define objThreshold 4
 // this are the postions the robot need to check// lave om på talene senere
 const int check[3][2] = {{20, 47}, {40, 38}, {65, 10}};
 const int charger[2] = {0, 0};
@@ -40,8 +40,6 @@ int checkposy = 0;
 
 int avoidDist = 15;
 float checkDist = 0;
-
-
 
 // Function definitions:
 void ALARM(uint32_t);
@@ -82,8 +80,11 @@ void setup()
 
 void loop()
 {
-  forward(30, 150);
-  int rand = random(10, 350);
+
+    Serial.println("Hello World");
+/**/ forward(30, 150);
+    delay(2000);
+  /*int rand = random(10, 350);
   turnByAngleNew(rand);
 
   if (millis() > 30000)
@@ -91,7 +92,7 @@ void loop()
     MoveToPos(charger[0], charger[1]);
     motors.setSpeeds(0,0);
     delay(2000);
-  }
+  }*/
 
  /*MoveToPos(20,20);
  delay(2000);
@@ -101,6 +102,10 @@ void loop()
  
 
  
+
+ MoveToPos(10,10);
+ delay(1000);
+
 }
 
 void newAvoid(){
@@ -123,14 +128,19 @@ void ALARM(uint32_t time = 3000)
   uint32_t startTime = millis();
   while (millis() - startTime < time)
   {
+    Serial.println("ALARM!");
     buzzer.playFrequency(5000, 300, 10);
-    while (buzzer.isPlaying())
-    {
-    }
+    ledRed(1);
+    ledYellow(1);
+    ledGreen(1);
+    delay(200);
     buzzer.playFrequency(6000, 300, 10);
-    while (buzzer.isPlaying())
-    {
-    }
+    ledRed(0);
+    ledYellow(0);
+    ledGreen(0);
+    delay(200);
+     Serial.println("x: "+String(robotposx));
+     Serial.println("y: "+ String(robotposy));
   }
 }
 
@@ -540,9 +550,6 @@ void forward2(uint16_t dist = 0, uint16_t speed = 0)
 }
 
 
-
-
-
 // Avoid collision with a object by going around it, return true when done.
 void avoid()
 {
@@ -626,8 +633,6 @@ bool detectObject()
   }
   return false;
 }
-
-
 
 
 
