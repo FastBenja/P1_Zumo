@@ -155,8 +155,8 @@ float getDistance()
   long int countsL = encoders.getCountsLeft();
   long int countsR = encoders.getCountsRight();
 
-  float distanceL = countsL / cpr * (wheelCirc / 10);
-  float distanceR = countsR / cpr * (wheelCirc / 10);
+  float distanceL = countsL / cpr * wheelCirc;
+  float distanceR = countsR / cpr * wheelCirc;
 
   return (distanceL + distanceR) / 2;
 }
