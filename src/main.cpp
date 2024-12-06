@@ -27,7 +27,8 @@ int16_t turnRate = 0;
 uint16_t gyroLastUpdate = 0;
 unsigned int lineSensorValues[3];
 
-float wheelCirc = 122.52;
+float wheelCirc = 122.52/10;
+float cpr = 909.7;
 
 // Postion of the robot
 int robotposx = 0;
@@ -78,8 +79,7 @@ void setup()
 
 void loop()
 {
- MoveToPos(10,10);
- delay(1000);
+ 
 }
 
 void newAvoid(){
@@ -155,8 +155,8 @@ float getDistance()
   long int countsL = encoders.getCountsLeft();
   long int countsR = encoders.getCountsRight();
 
-  float distanceL = countsL / 900.0 * (wheelCirc / 10);
-  float distanceR = countsR / 900.0 * (wheelCirc / 10);
+  float distanceL = countsL / cpr * (wheelCirc / 10);
+  float distanceR = countsR / cpr * (wheelCirc / 10);
 
   return (distanceL + distanceR) / 2;
 }
