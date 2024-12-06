@@ -3,15 +3,16 @@
 #include <Zumo32U4.h>
 #include <PololuOLED.h>
 
+
 int speed = 100;
 #define thieveThreshold 4 // Was 1.6
 #define lineThreshold 1000
 #define objThreshold 6
 // this are the postions the robot need to check// lave om på talene senere
 const int check[3][2] = {{20, 47}, {40, 38}, {65, 10}};
-const int charger[2] = {100, 100};
+const int charger[2] = {0, 0};
 
-Zumo32U4LCD display;
+Zumo32U4OLED display;
 Zumo32U4IMU imu;
 Zumo32U4ButtonA buttonA;
 Zumo32U4Buzzer buzzer;
@@ -40,6 +41,8 @@ int checkposy = 0;
 int avoidDist = 15;
 float checkDist = 0;
 
+
+
 // Function definitions:
 void ALARM(uint32_t);
 int offsetAngValue(int, int);
@@ -50,7 +53,7 @@ void backwards(int, int);
 void pose(int, int);
 void savePos();
 void turnSensorUpdate();
-void detectObject();
+bool detectObject();
 uint32_t getTurnAngleInDegrees();
 void turnByAngleNew(int);
 void forward(uint16_t, uint16_t);
@@ -58,10 +61,11 @@ void MoveToPos(int, int);
 void turnSensorReset();
 void turnSensorSetup();
 bool checkTheft();
-void checkSurroundings();
+bool checkSurroundings();
 void avoid();
 void newAvoid();
-
+bool linesensor();
+void forward2(uint16_t, uint16_t);
 void setup()
 {
   // put your setup code here, to run once:
@@ -78,24 +82,35 @@ void setup()
 
 void loop()
 {
-  /* forward(30, 150);
+  forward(30, 150);
   int rand = random(10, 350);
   turnByAngleNew(rand);
 
-  if (millis() > 180000)
+  if (millis() > 30000)
   {
     MoveToPos(charger[0], charger[1]);
-  } */
- newAvoid();
- delay(5000);
+    motors.setSpeeds(0,0);
+    delay(2000);
+  }
+
+ /*MoveToPos(20,20);
+ delay(2000);
+ MoveToPos(0,0);
+ delay(2000);*/
+ 
+ 
+
+ 
 }
 
 void newAvoid(){
   turnByAngleNew(20);
-  forward(25,150);
+  forward2(25,150);
   turnByAngleNew(310);
-  forward(25,150);
+  forward2(25,150);
   turnByAngleNew(20);
+  checkDist = 42.64;
+
 }
 
 /**
@@ -156,7 +171,8 @@ void stop()
  * \retval Returns the accumulated distance that the robot has traveled based on the encoder counts.
  */
 float getDistance()
-{
+{ 
+  // get distance in cm
   long int countsL = encoders.getCountsLeft();
   long int countsR = encoders.getCountsRight();
 
@@ -308,8 +324,9 @@ void turnByAngleNew(int angleToTurn = 0)
  * \brief Rotates twice while recording values from the proximity sensors.
  * \return Returns true if a thieve is detected. Returns false if no thieve is detected
  */
-bool checkTheft()
+bool checkTheft() // kordnate 
 {
+    
   // Initialise variables
   int base[9], test[9];
   uint32_t angle = 0;
@@ -319,10 +336,11 @@ bool checkTheft()
   bool halfway = false;
 
   // Store the initial angle, used for offset.
-  uint32_t startAngle = getTurnAngleInDegrees();
+  turnSensorReset();
+  //uint32_t startAngle = getTurnAngleInDegrees();
 
   // Begin rotation
-  motors.setSpeeds(-150, 150);
+  motors.setSpeeds(-100, 100);
 
   // Record a value for each 40 degrees (9 measurements) save it in base list.
   // Next repeat the measurement but save the result in test list.
@@ -330,7 +348,12 @@ bool checkTheft()
   while (numTurns < 2)
   {
     // Update the offsat angle and print it.
-    angle = offsetAngValue(getTurnAngleInDegrees(), startAngle);
+    //angle = offsetAngValue(getTurnAngleInDegrees(), startAngle);
+    angle = getTurnAngleInDegrees();
+         // Clears the OLED display.
+          display.clear();
+          display.gotoXY(0, 0); // Sets the position on the OLED, where the message should be printed.
+          display.print(angle);
     // Serial.println("Vinkel: " + String(angle) + " numTurns: " + String(numTurns) + " Turn angle in degrees: " + String(getTurnAngleInDegrees()) + " StartAngle: " + startAngle);
 
     // Count number of full rotations
@@ -418,19 +441,40 @@ bool checkTheft()
  */
 void forward(uint16_t dist = 0, uint16_t speed = 0)
 {
-  resetEncoders();
-  checkDist = 0;
-  while (checkDist + getDistance() <= dist)
+  int diff = 0;
+  float leftEncCount = 0;
+   float rightEncCount = 0;
+    resetEncoders();
+    checkDist = 0;
+  while (getDistance() + checkDist < dist)
   {
-    long leftEncCount = encoders.getCountsLeft();
-    long rightEncCount = encoders.getCountsRight();
 
-    checkSurroundings();
+    bool check = false;
+     check = checkSurroundings();
+     leftEncCount = encoders.getCountsLeft();
+     rightEncCount = encoders.getCountsRight();
 
+    //display.clear();      // Clears the OLED display.
+      display.gotoXY(0, 0); // Sets the position on the OLED, where the message should be printed.
+      display.print(getDistance());
+       
+      if(check){
+         diff = leftEncCount - rightEncCount;
+        float distanceL = leftEncCount / 900.0 * (wheelCirc / 10);
+        float distanceR = rightEncCount / 900.0 * (wheelCirc / 10);
+
+         checkDist = checkDist + (distanceL + distanceR) / 2;
+      }
+      else{
+
+        diff = encoders.getCountsLeft() - encoders.getCountsRight();
+      }
+
+     // rest encode so surround don't effect distance 
     /*
     If right is ahead, diff is negative. If right is behind, diff is positive.
     */
-    int diff = (encoders.getCountsLeft() - leftEncCount) - (encoders.getCountsRight() - rightEncCount);
+    
     // Serial.println(diff);
     int compSpeed = speed + diff * 5;
     motors.setSpeeds(speed, compSpeed);
@@ -451,6 +495,53 @@ void forward(uint16_t dist = 0, uint16_t speed = 0)
   display.print(robotposy); // 46
   */
 }
+
+void forward2(uint16_t dist = 0, uint16_t speed = 0)
+{
+  int diff = 0;
+  float leftEncCount = 0;
+   float rightEncCount = 0;
+    resetEncoders();
+    checkDist = 0;
+  while (getDistance() + checkDist < dist)
+  {
+    bool check = false;
+     leftEncCount = encoders.getCountsLeft();
+     rightEncCount = encoders.getCountsRight();
+
+    //display.clear();      // Clears the OLED display.
+      
+      diff = encoders.getCountsLeft() - encoders.getCountsRight();
+
+     // rest encde so surround don't effect distance 
+    /*
+    If right is ahead, diff is negative. If right is behind, diff is positive.
+    */
+    
+    // Serial.println(diff);
+    int compSpeed = speed + diff * 5;
+    motors.setSpeeds(speed, compSpeed);
+  }
+  stop();
+
+  // convert distance and the angle of robot to x and y coordinates
+  // i stedet for angle skal der bruges "getTurnAngleInDegrees()"
+  robotposx = robotposx + dist * cos(robotangle / (180 / PI)); // ikke færdig
+  robotposy = robotposy + dist * sin(robotangle / (180 / PI));
+
+  // just to check
+  /*
+  display.clear();          // Clears the OLED display.
+  display.gotoXY(0, 0);     // Sets the position on the OLED, where the message should be printed.
+  display.print(robotposx); // 20                                  // Prints "Obstacle".
+  display.gotoXY(0, 1);     // Sets the position on the OLED, where the next line should be printed.
+  display.print(robotposy); // 46
+  */
+}
+
+
+
+
 
 // Avoid collision with a object by going around it, return true when done.
 void avoid()
@@ -496,17 +587,29 @@ void avoid()
 }
 
 // Robot detects if any object is infront of it, returns true if a object is present.
-void detectObject()
+bool detectObject()
 {
   proximitySensor.read();
   int leftReading = proximitySensor.countsFrontWithLeftLeds();
   int rightReading = proximitySensor.countsFrontWithRightLeds();
 
+    
   if (leftReading >= objThreshold || rightReading >= objThreshold)
   {
+
+    display.clear();      // Clears the OLED display.
+    display.gotoXY(0, 0); // Sets the position on the OLED, where the message should be printed.
+   display.print("theft");
     if (!checkTheft())
     {
-      avoid();
+      //avoid();
+       display.clear();      // Clears the OLED display.
+      display.gotoXY(0, 0); // Sets the position on the OLED, where the message should be printed.
+      display.print("avoid");
+
+     newAvoid();
+      
+       /// Husk !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
     }
     /*
                                   // If the sensor readings is more or equal to the threshold value, then the robot should print "Obstacle ahead!" to the OLED.
@@ -517,10 +620,22 @@ void detectObject()
     display.print(F("ahead!"));   // Prints "ahead!".
     return true;
     */
+   
+   resetEncoders();
+   return true;
   }
+  return false;
 }
 
-void linesensor()
+
+
+
+
+
+// Robot detects if any object is infront of it, returns true if a object is present.
+
+
+bool linesensor()
 {
   // Read line sensor values
   lineSenors.read(lineSensorValues);
@@ -531,13 +646,19 @@ void linesensor()
     backward(5, 150);
     int rand = random(181, 350);
     turnByAngleNew(rand);
+    resetEncoders();
+    return true;
   }
   else if (lineSensorValues[2] > lineThreshold)
   {
     backward(5, 150);
     int rand = random(10, 179);
     turnByAngleNew(rand);
+    resetEncoders();
+    return true;
+    
   }
+  return false;
 
   /* if (getDistance() > 150)
    {
@@ -582,15 +703,32 @@ void linesensor()
  */
 }
 
-void checkSurroundings()
-{
-  linesensor();
-  detectObject();
+bool checkSurroundings()
+{  
+  bool check = false;
+  check = linesensor();
+  display.clear();      // Clears the OLED display.
+  display.gotoXY(0, 0); // Sets the position on the OLED, where the message should be printed.
+  display.print("Object");
+  check = detectObject();
+  display.clear();      // Clears the OLED display.
+  display.gotoXY(0, 0); // Sets the position on the OLED, where the message should be printed.
+  display.print("forward");
+  return check;
 }
 
 // It move the robot to given positions
 void MoveToPos(int x = 0, int y = 0)
 {
+  display.clear();      // Clears the OLED display.
+  display.gotoXY(0, 0); // Sets the position on the OLED, where the message should be printed.
+  display.print("x: " + String(robotposx));
+ 
+  display.gotoXY(0, 1); // Sets the position on the OLED, where the message should be printed.
+  display.print("y: " + String(robotposy));
+
+    delay(1000);
+
   // varibel for the vektor
   int newposx = 0;
   int newposy = 0;
@@ -623,13 +761,32 @@ void MoveToPos(int x = 0, int y = 0)
   newposx = x - robotposx;
   newposy = y - robotposy;
 
+  display.clear();      // Clears the OLED display.
+  display.gotoXY(0, 0); // Sets the position on the OLED, where the message should be printed.
+  display.print("newx: " + String(newposx));
+ 
+  display.gotoXY(0, 1); // Sets the position on the OLED, where the message should be printed.
+  display.print("newy: " + String(newposy));
+  delay(1500);
+  
+
   // angle get round up it float return get convert to int
-  angle = atan2(newposy, newposx) * (180 / PI);   // makes angle from the vektor
+  angle = abs(robotangle-(atan2(newposy, newposx) * (180 / PI)));   // makes angle from the vektor
   dist = sqrt(pow(newposx, 2) + pow(newposy, 2)); // find length of the vektor
   if (angle < 0)
   {
     angle = 360 + angle;
   }
+
+  display.clear();      // Clears the OLED display.
+  display.gotoXY(0, 0); // Sets the position on the OLED, where the message should be printed.
+  display.print("V: " + String(angle));
+ 
+  display.gotoXY(0, 1); // Sets the position on the OLED, where the message should be printed.
+  display.print("D: " + String(dist));
+  
+  delay(1000);
+
   Serial.println("newposx: ");
   Serial.println(newposx);
 
@@ -650,7 +807,7 @@ void MoveToPos(int x = 0, int y = 0)
   // Her we put the angle and distance robot too travel
   // turn
   turnByAngleNew(angle);
-  forward(dist, 200);
+  forward2(dist, 200);
 }
 
 /** \brief Robot turns right or left with a specified radius, angle and speed.
