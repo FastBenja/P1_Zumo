@@ -83,7 +83,6 @@ void setup()
 
 void loop()
 {
-<<<<<<< HEAD
 
     Serial.println("Hello World");
 /**/ forward(30, 150);
@@ -110,9 +109,6 @@ void loop()
  MoveToPos(10,10);
  delay(1000);
 
-=======
- 
->>>>>>> 7c225ebe494ada962fc76716c75eeab3e00e8597
 }
 
 void newAvoid(){
@@ -133,6 +129,9 @@ void newAvoid(){
 void ALARM(uint32_t time = 3000)
 {
   uint32_t startTime = millis();
+  Serial.println("ALARM! Robot Position:");
+  Serial.println("x: " + String(robotposx));
+  Serial.println("y: " + String(robotposy));
   while (millis() - startTime < time)
   {
     Serial.println("ALARM!");
@@ -146,8 +145,6 @@ void ALARM(uint32_t time = 3000)
     ledYellow(0);
     ledGreen(0);
     delay(200);
-     Serial.println("x: "+String(robotposx));
-     Serial.println("y: "+ String(robotposy));
   }
 }
 
