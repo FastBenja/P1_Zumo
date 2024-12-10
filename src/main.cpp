@@ -81,10 +81,6 @@ void setup()
 
 void loop()
 {
-  MoveToPos(40,40);
-  delay(1000);
-  MoveToPos(10,10);
-  delay(1000);
   MoveToPos(20,20);
   delay(1000);
 }
@@ -108,8 +104,8 @@ void ALARM(uint32_t time = 3000)
 {
   uint32_t startTime = millis();
   Serial.println("ALARM! Robot Position:");
-  Serial.println("x: " + String(robotposx));
-  Serial.println("y: " + String(robotposy));
+  Serial.println("x: " + String(robotposx + getDistance() * cos(robotangle / (180 / PI))));
+  Serial.println("y: " + String(robotposy + getDistance() * sin(robotangle / (180 / PI))));
   while (millis() - startTime < time)
   {
     Serial.println("ALARM!");
