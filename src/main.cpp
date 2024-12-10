@@ -65,6 +65,7 @@ void avoid();
 void newAvoid();
 bool linesensor();
 void forward2(uint16_t, uint16_t);
+void navigateRandom();
 void setup()
 {
   // put your setup code here, to run once:
@@ -81,8 +82,8 @@ void setup()
 
 void loop()
 {
-  MoveToPos(20,20);
-  delay(1000);
+  navigateRandom();
+  delay(500);
 }
 
 void newAvoid(){
@@ -849,4 +850,11 @@ void turnRandom()
   turnByAngleNew(randomNumber);
   stop();
   delay(1000);
+}
+
+void navigateRandom(){
+  int randDist = random(10,100);
+  int randSpeed = random(100,200);
+  turnRandom();
+  forward(randDist, randSpeed);
 }
