@@ -7,7 +7,7 @@
 int speed = 100;
 #define thieveThreshold 2 // Was 1.6
 #define lineThreshold 1000
-#define objThreshold 4
+#define objThreshold 5
 // this are the postions the robot need to check// lave om på talene senere
 const int check[3][2] = {{20, 47}, {40, 38}, {65, 10}};
 const int charger[2] = {0, 0};
@@ -98,19 +98,15 @@ void setup()
 
 void loop()
 {
-  randomMovement();
-  stop();
-  display.clear();
-  display.gotoXY(0,0);
-  display.print("Done");
-  delay(10000);
+  navigateRandom();
+  delay(1000);
 }
 
 void newAvoid(){
   turnByAngleNew(20);
-  forward2(25,150);
+  forward(25,150);
   turnByAngleNew(310);
-  forward2(25,150);
+  forward(25,150);
   turnByAngleNew(20);
   checkDist = 42.64;
 
@@ -460,7 +456,7 @@ void forward(uint16_t dist = 0, uint16_t speed = 0)
    float rightEncCount = 0;
     resetEncoders();
     checkDist = 0;
-  while (getDistance() + checkDist != dist) //ændre til ikke lig dist
+  while (getDistance() + checkDist < dist) //ændre til ikke lig dist
   {
 
     bool check = false;
@@ -883,10 +879,11 @@ void turnRandom()
 }
 
 void navigateRandom(){
-  int randDist = random(10,100);
+  int randDist = random(10,50);
   int randSpeed = random(100,200);
   turnRandom();
   forward(randDist, randSpeed);
+  delay(50);
 }
 
 void randomMovement(){
