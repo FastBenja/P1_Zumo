@@ -21,6 +21,7 @@ Zumo32U4Motors motors;
 Zumo32U4ProximitySensors proximitySensor;
 Zumo32U4LineSensors lineSenors;
 
+
 // variables for gyro
 int16_t gyroOffset = 0;
 uint32_t turnAngle = 0;
@@ -65,6 +66,13 @@ void avoid();
 void newAvoid();
 bool linesensor();
 void forward2(uint16_t, uint16_t);
+void randomMovement();
+
+
+
+
+// lige her sættes en kom
+
 void setup()
 {
   // put your setup code here, to run once:
@@ -77,12 +85,24 @@ void setup()
   proximitySensor.setBrightnessLevels(customBrightnessLevels, 6);
   // proximitySensor.setBrightnessLevels(proxBrightnesses,6);
   lineSenors.initThreeSensors();
+  imu.init();
+  Wire.begin();
+  imu.enableDefault();
+  imu.configureForTurnSensing();
+  uint32_t seed = imu.m.x ^ micros(); // Kombiner IMU-data med tid
+  randomSeed(seed);
+  // Initialiser eksternt magnetometer
+  
 }
 
 void loop()
 {
-  MoveToPos(20,20);
-  delay(1000);
+  randomMovement();
+  stop();
+  display.clear();
+  display.gotoXY(0,0);
+  display.print("Done");
+  delay(10000);
 }
 
 void newAvoid(){
@@ -100,6 +120,8 @@ void newAvoid(){
  * \param time Duration in ms that the alarm should sound (Best if devisible by 300)
  * otherwise the duration will be prolonged until the time in ms is divisible by 300
  */
+
+
 void ALARM(uint32_t time = 3000)
 {
   uint32_t startTime = millis();
@@ -126,7 +148,7 @@ void ALARM(uint32_t time = 3000)
  * the function handels wrapping of the value back to 0
  * \param value The current absolute angle of the robot
  * \param offset The amount to offset the angle
- * \retval Offsat angle wrapped back to 0.
+ * \retval Offsat angle wrapped back to 0.   
  **/
 int offsetAngValue(int value, int offset)
 {
@@ -148,16 +170,16 @@ void resetEncoders()
   encoders.getCountsAndResetRight();
 }
 
-/** \brief Stops the robot movement
+/** \brief Stops the robot movement 
  **/
 void stop()
 {
   motors.setSpeeds(0, 0);
 }
 
-/**
- * \retval Returns the accumulated distance that the robot has traveled based on the encoder counts.
- */
+
+ //retval Returns the accumulated distance that the robot has traveled based on the encoder counts. 
+ 
 float getDistance()
 { 
   // get distance in cm
@@ -182,10 +204,13 @@ void backward(int dist = 0, int speed = 0)
     int compSpeed = speed + diff * 0.5;
     motors.setSpeeds(-speed, -compSpeed);
   }
+  /*
   stop();
+  
   // convert distance and the angle of robot to x and y coordinates
   robotposx = robotposx - dist * cos(robotangle / (180 / PI)); // ikke færdig
   robotposy = robotposy - dist * sin(robotangle / (180 / PI));
+  */
 }
 
 // is ways save object there in the way for robot, ambiguus for the moment.
@@ -213,10 +238,10 @@ void test()
   {
     MoveToPos(check[0][i], check[1][i]);
   }
-}*/
+}
 
 /* Read the gyro and update the angle.  This should be called as
- frequently as possible while using the gyro to do turns. */
+ frequently as possible while using the gyro to do turns.*/ 
 void turnSensorUpdate()
 {
   // Read the measurements from the gyro.
@@ -262,7 +287,7 @@ uint32_t getTurnAngleInDegrees()
 /**
  * \brief Takes an angle and turns the robot to face that angle relative to the starting position.
  * \param angleToTurn Specify the angle to turn, only positive integers between 0 and 359
- */
+                           */ 
 void turnByAngleNew(int angleToTurn = 0)
 {
   // Return if parm is outside allowed spectrum
@@ -434,20 +459,18 @@ void forward(uint16_t dist = 0, uint16_t speed = 0)
    float rightEncCount = 0;
     resetEncoders();
     checkDist = 0;
-  while (getDistance() + checkDist < dist)
+  while (getDistance() + checkDist != dist) //ændre til ikke lig dist
   {
 
     bool check = false;
-     check = checkSurroundings();
+     check = checkSurroundings(); 
      leftEncCount = encoders.getCountsLeft();
      rightEncCount = encoders.getCountsRight();
 
-    //display.clear();      // Clears the OLED display.
-      display.gotoXY(0, 0); // Sets the position on the OLED, where the message should be printed.
-      display.print(getDistance());
+      
        
       if(check){
-         diff = leftEncCount - rightEncCount;
+        diff = leftEncCount - rightEncCount;
         float distanceL = leftEncCount / 900.0 * (wheelCirc / 10);
         float distanceR = rightEncCount / 900.0 * (wheelCirc / 10);
 
@@ -455,17 +478,22 @@ void forward(uint16_t dist = 0, uint16_t speed = 0)
       }
       else{
 
-        diff = encoders.getCountsLeft() - encoders.getCountsRight();
+        diff = leftEncCount - rightEncCount;
       }
 
      // rest encode so surround don't effect distance 
-    /*
-    If right is ahead, diff is negative. If right is behind, diff is positive.
-    */
+      
+    //If right is ahead, diff is negative. If right is behind, diff is positive.
+    
     
     // Serial.println(diff);
     int compSpeed = speed + diff * 5;
     motors.setSpeeds(speed, compSpeed);
+    display.clear();      // Clears the OLED display.
+      display.gotoXY(0, 0); // Sets the position on the OLED, where the message should be printed.
+      display.print(speed);
+      display.gotoXY(0,1);
+      display.print(compSpeed);
   }
   stop();
 
@@ -604,7 +632,7 @@ bool detectObject()
     display.gotoXY(0, 1);         // Sets the position on the OLED, where the next line should be printed.
     display.print(F("ahead!"));   // Prints "ahead!".
     return true;
-    */
+     */
    
    resetEncoders();
    return true;
@@ -739,7 +767,7 @@ void MoveToPos(int x = 0, int y = 0)
   }
 
   newposx = robotposx + newposx;
-  newposy = robotposy + newposy;*/
+  newposy = robotposy + newposy; */
 
   newposx = x - robotposx;
   newposy = y - robotposy;
@@ -785,7 +813,7 @@ void MoveToPos(int x = 0, int y = 0)
   else
   {
     angle = robotangle - angle;
-  */
+   */
 
   // Her we put the angle and distance robot too travel
   // turn
@@ -796,7 +824,7 @@ void MoveToPos(int x = 0, int y = 0)
 /** \brief Robot turns right or left with a specified radius, angle and speed.
  *
  * \param dir 0 = Right 1 = Left
- **/
+  */
 void turnArc(bool dir = 0, int radius = 100, int speed = 100)
 {
 }
@@ -847,6 +875,36 @@ void turnRandom()
 {
   int randomNumber = random(10, 359);
   turnByAngleNew(randomNumber);
+  Serial.print(randomNumber);
   stop();
   delay(1000);
+}
+
+void randomMovement(){
+    for (int i = 0; i <6; i++)
+    {
+      display.clear();
+      delay(500);
+      int rNumber = random(1,5);
+      display.gotoXY(0,0);
+      display.print(rNumber);
+      delay(1000);
+      switch (rNumber)
+      {
+      case(1):
+        forward2(20, 100);
+      break;
+      case(2):
+        backward(20,100);
+      break;
+      case(3):
+        turnByAngleNew(90);
+        delay(1500);
+      break;
+      case(4):
+        turnByAngleNew(180);
+      break;
+      delay(1500);
+      }
+    }
 }
