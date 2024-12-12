@@ -689,11 +689,12 @@ bool linesensor()
 bool checkSurroundings()
 {  
   bool check = false;
-  check = linesensor();
+  check = detectObject();
   display.clear();      // Clears the OLED display.
   display.gotoXY(0, 0); // Sets the position on the OLED, where the message should be printed.
   display.print("Object");
-  check = detectObject();
+  
+  check = linesensor();
   display.clear();      // Clears the OLED display.
   display.gotoXY(0, 0); // Sets the position on the OLED, where the message should be printed.
   display.print("forward");
