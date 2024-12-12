@@ -66,12 +66,13 @@ void avoid();
 void newAvoid();
 bool linesensor();
 void forward2(uint16_t, uint16_t);
+void navigateRandom();
 void randomMovement();
 
 
 
 
-// lige her sættes en kom
+
 
 void setup()
 {
@@ -878,6 +879,13 @@ void turnRandom()
   Serial.print(randomNumber);
   stop();
   delay(1000);
+}
+
+void navigateRandom(){
+  int randDist = random(10,100);
+  int randSpeed = random(100,200);
+  turnRandom();
+  forward(randDist, randSpeed);
 }
 
 void randomMovement(){
