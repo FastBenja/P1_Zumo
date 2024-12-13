@@ -5,7 +5,7 @@
 
 
 int speed = 100;
-#define thieveThreshold 2 // Was 1.6
+#define thieveThreshold 20 // Was 1.6
 #define lineThreshold 1000
 #define objThreshold 5
 // this are the postions the robot need to check// lave om på talene senere
@@ -98,6 +98,8 @@ void setup()
 
 void loop()
 {
+  MoveToPos(40,40);
+  delay(500);
   navigateRandom();
   delay(1000);
 }
@@ -891,26 +893,30 @@ void randomMovement(){
     {
       display.clear();
       delay(500);
-      int rNumber = random(1,5);
+      int caseNumber = random(1,3);
+      int distRandom = random(10,50);
+      int speedRandom = random(25, 200);
+      int turnR = (10, 359);
       display.gotoXY(0,0);
-      display.print(rNumber);
+      display.print(caseNumber);
       delay(1000);
-      switch (rNumber)
+      switch (caseNumber)
       {
       case(1):
-        forward2(20, 100);
+      display.clear();
+      display.gotoXY(0,0);
+      display.print(distRandom);
+      display.gotoXY(0,1);
+      display.print(speedRandom);
+        forward2(distRandom, speed);
       break;
       case(2):
-        backward(20,100);
-      break;
-      case(3):
-        turnByAngleNew(90);
+      display.clear();
+      display.gotoXY(0,0);
+      display.print(turnR);
+        turnByAngleNew(turnR);
         delay(1500);
       break;
-      case(4):
-        turnByAngleNew(180);
-      break;
-      delay(1500);
       }
     }
 }
