@@ -19,20 +19,26 @@ int speed = 100;
 #define HMC5883L_ADDR 0x1E // Address of HMC5883L
 
 // MPU6050 registers
-#define MPU6050_REG_PWR_MGMT_1 0x6B
-#define MPU6050_REG_INT_PIN_CFG 0x37
+#define MPU6050_REG_PWR_MGMT_1 0x6B //For waking up the MPU
+#define MPU6050_REG_INT_PIN_CFG 0x37 //For bypassing the i2c bus
 
 // HMC5883L registers
-#define HMC5883L_REG_CONFIG_A 0x00
-#define HMC5883L_REG_MODE 0x02
-#define HMC5883L_REG_DATA_X_MSB 0x03
+#define HMC5883L_REG_CONFIG_A 0x00 //Config
+#define HMC5883L_REG_MODE 0x02 //Config
+#define HMC5883L_REG_DATA_X_MSB 0x03 //Data
 
-// this are the postions the robot need to check// lave om på talene senere
+//These are the postions the robot need to check - lave om på talene senere
 const int check[3][2] = {{20, 47}, {40, 38}, {65, 10}};
+
+//Calculated transformation matrix ans offset for magnetometer correction
 float transformationMatrix[2][2] = {{-0.00724577, -0.00242076}, {0.00220427, -0.00659776}};
 float magOffsetX = -98.54545454, magOffsetY = -338.4919786;
+
+//Charging station location in X,Y coordinates
 const int charger[2] = {0, 0};
-int16_t mx, my, mz; // Value for storing the raw mag readings.
+
+// Values for storing the raw mag readings.
+int16_t mx, my, mz; 
 
 Zumo32U4OLED display;
 Zumo32U4IMU imu;
@@ -97,11 +103,6 @@ uint8_t readRegister(uint8_t, uint8_t);
 void readHMC5883LData(int16_t *, int16_t *, int16_t *);
 void randomMovement();
 
-
-
-
-
-
 void setup()
 {
   delay(2000);
@@ -130,7 +131,7 @@ void setup()
   // Initialize HMC5883L
   writeRegister(HMC5883L_ADDR, HMC5883L_REG_CONFIG_A, 0x70); // 8-average, 15 Hz default
   writeRegister(HMC5883L_ADDR, HMC5883L_REG_MODE, 0x00);     // Continuous measurement mode
-  
+
   imu.init();
   Wire.begin();
   imu.enableDefault();
@@ -142,7 +143,7 @@ void setup()
 void loop()
 {
   Serial.println(calculateMagHeading());
-  //turnByMag(90);
+  // turnByMag(90);
   delay(100);
 }
 
@@ -161,7 +162,6 @@ void newAvoid()
  * \param time Duration in ms that the alarm should sound (Best if devisible by 300)
  * otherwise the duration will be prolonged until the time in ms is divisible by 300
  */
-
 
 void ALARM(uint32_t time = 3000)
 {
@@ -189,7 +189,7 @@ void ALARM(uint32_t time = 3000)
  * the function handels wrapping of the value back to 0
  * \param value The current absolute angle of the robot
  * \param offset The amount to offset the angle
- * \retval Offsat angle wrapped back to 0.   
+ * \retval Offsat angle wrapped back to 0.
  **/
 int offsetAngValue(int value, int offset)
 {
@@ -211,16 +211,15 @@ void resetEncoders()
   encoders.getCountsAndResetRight();
 }
 
-/** \brief Stops the robot movement 
+/** \brief Stops the robot movement
  **/
 void stop()
 {
   motors.setSpeeds(0, 0);
 }
 
+// retval Returns the accumulated distance that the robot has traveled based on the encoder counts.
 
- //retval Returns the accumulated distance that the robot has traveled based on the encoder counts. 
- 
 float getDistance()
 {
   // get distance in cm
@@ -247,7 +246,7 @@ void backward(int dist = 0, int speed = 0)
   }
   /*
   stop();
-  
+
   // convert distance and the angle of robot to x and y coordinates
   robotposx = robotposx - dist * cos(robotangle / (180 / PI)); // ikke færdig
   robotposy = robotposy - dist * sin(robotangle / (180 / PI));
@@ -282,7 +281,7 @@ void test()
 }
 
 /* Read the gyro and update the angle.  This should be called as
- frequently as possible while using the gyro to do turns.*/ 
+ frequently as possible while using the gyro to do turns.*/
 void turnSensorUpdate()
 {
   // Read the measurements from the gyro.
@@ -328,7 +327,7 @@ uint32_t getTurnAngleInDegrees()
 /**
  * \brief Takes an angle and turns the robot to face that angle relative to the starting position.
  * \param angleToTurn Specify the angle to turn, only positive integers between 0 and 359
-                           */ 
+ */
 void turnByAngleNew(int angleToTurn = 0)
 {
   // Return if parm is outside allowed spectrum
@@ -497,10 +496,10 @@ void forward(uint16_t dist = 0, uint16_t speed = 0)
 {
   int diff = 0;
   float leftEncCount = 0;
-   float rightEncCount = 0;
-    resetEncoders();
-    checkDist = 0;
-  while (getDistance() + checkDist < dist) //ændre til ikke lig dist
+  float rightEncCount = 0;
+  resetEncoders();
+  checkDist = 0;
+  while (getDistance() + checkDist < dist) // ændre til ikke lig dist
   {
 
     bool check = false;
@@ -508,20 +507,19 @@ void forward(uint16_t dist = 0, uint16_t speed = 0)
     leftEncCount = encoders.getCountsLeft();
     rightEncCount = encoders.getCountsRight();
 
-      
-       
-      if(check){
-        diff = leftEncCount - rightEncCount;
-        float distanceL = leftEncCount / 900.0 * (wheelCirc / 10);
-        float distanceR = rightEncCount / 900.0 * (wheelCirc / 10);
+    if (check)
+    {
+      diff = leftEncCount - rightEncCount;
+      float distanceL = leftEncCount / 900.0 * (wheelCirc / 10);
+      float distanceR = rightEncCount / 900.0 * (wheelCirc / 10);
 
       checkDist = checkDist + (distanceL + distanceR) / 2;
     }
     else
     {
 
-        diff = leftEncCount - rightEncCount;
-      }
+      diff = leftEncCount - rightEncCount;
+    }
 
     // rest encode so surround don't effect distance
     /*
@@ -532,10 +530,10 @@ void forward(uint16_t dist = 0, uint16_t speed = 0)
     int compSpeed = speed + diff * 5;
     motors.setSpeeds(speed, compSpeed);
     display.clear();      // Clears the OLED display.
-      display.gotoXY(0, 0); // Sets the position on the OLED, where the message should be printed.
-      display.print(speed);
-      display.gotoXY(0,1);
-      display.print(compSpeed);
+    display.gotoXY(0, 0); // Sets the position on the OLED, where the message should be printed.
+    display.print(speed);
+    display.gotoXY(0, 1);
+    display.print(compSpeed);
   }
   stop();
 
@@ -673,9 +671,9 @@ bool detectObject()
     display.print(F("ahead!"));   // Prints "ahead!".
     return true;
      */
-   
-   resetEncoders();
-   return true;
+
+    resetEncoders();
+    return true;
   }
   return false;
 }
@@ -756,7 +754,7 @@ bool checkSurroundings()
   display.clear();      // Clears the OLED display.
   display.gotoXY(0, 0); // Sets the position on the OLED, where the message should be printed.
   display.print("Object");
-  
+
   check = linesensor();
   display.clear();      // Clears the OLED display.
   display.gotoXY(0, 0); // Sets the position on the OLED, where the message should be printed.
@@ -859,7 +857,7 @@ void MoveToPos(int x = 0, int y = 0)
 /** \brief Robot turns right or left with a specified radius, angle and speed.
  *
  * \param dir 0 = Right 1 = Left
-  */
+ */
 void turnArc(bool dir = 0, int radius = 100, int speed = 100)
 {
 }
@@ -915,43 +913,44 @@ void turnRandom()
   delay(1000);
 }
 
-void navigateRandom(){
-  int randDist = random(10,50);
-  int randSpeed = random(100,200);
+void navigateRandom()
+{
+  int randDist = random(10, 50);
+  int randSpeed = random(100, 200);
   turnRandom();
   forward(randDist, randSpeed);
   delay(50);
 }
 
-void randomMovement(){
-    for (int i = 0; i <6; i++)
+void randomMovement()
+{
+  for (int i = 0; i < 6; i++)
+  {
+    display.clear();
+    delay(500);
+    int rNumber = random(1, 5);
+    display.gotoXY(0, 0);
+    display.print(rNumber);
+    delay(1000);
+    switch (rNumber)
     {
-      display.clear();
-      delay(500);
-      int rNumber = random(1,5);
-      display.gotoXY(0,0);
-      display.print(rNumber);
-      delay(1000);
-      switch (rNumber)
-      {
-      case(1):
-        forward2(20, 100);
+    case (1):
+      forward2(20, 100);
       break;
-      case(2):
-        backward(20,100);
+    case (2):
+      backward(20, 100);
       break;
-      case(3):
-        turnByAngleNew(90);
-        delay(1500);
+    case (3):
+      turnByAngleNew(90);
+      delay(1500);
       break;
-      case(4):
-        turnByAngleNew(180);
+    case (4):
+      turnByAngleNew(180);
       break;
       delay(1500);
-      }
     }
+  }
 }
-
 
 void turnByMag(int angle)
 {
@@ -959,18 +958,18 @@ void turnByMag(int angle)
   turnByAngleNew(angle);
   float obtainedHead = calculateMagHeading();
   float magDiff = obtainedHead - initHead;
-int f;
-if (magDiff>angle)
-{
-f = 360 - (magDiff-angle);
-}
-if(angle>magDiff){
-f = angle - magDiff;
-}
-
+  int f;
+  if (magDiff > angle)
+  {
+    f = 360 - (magDiff - angle);
+  }
+  if (angle > magDiff)
+  {
+    f = angle - magDiff;
+  }
 
   Serial.print("Heading Error: " + String(f));
-  if (abs(magDiff)-angle > turnThreshold)
+  if (abs(magDiff) - angle > turnThreshold)
   {
     turnByMag(f);
   }
