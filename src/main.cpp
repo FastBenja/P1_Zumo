@@ -9,7 +9,7 @@
 #include <HMC5883L.h>
 
 int speed = 100;
-#define thieveThreshold 2 // Was 1.6
+#define thieveThreshold 4 // Was 1.6
 #define turnThreshold 2
 #define lineThreshold 1000
 #define objThreshold 5
@@ -64,6 +64,8 @@ int checkposy = 0;
 
 int avoidDist = 15;
 float checkDist = 0;
+
+int i = 0;
 
 // Function definitions:
 void ALARM(uint32_t);
@@ -141,17 +143,21 @@ void setup()
 
 void loop()
 {
-  Serial.println(calculateMagHeading());
-  //turnByMag(90);
-  delay(100);
+  while (i < 1){
+    i++;
+    MoveToPos(40,40);
+  }
+  delay(500);
+  navigateRandom();
+  delay(50);
 }
 
 void newAvoid()
 {
   turnByAngleNew(20);
-  forward2(25, 150);
+  forward(25, 150);
   turnByAngleNew(310);
-  forward2(25, 150);
+  forward(25, 150);
   turnByAngleNew(20);
   checkDist = 42.64;
 }
