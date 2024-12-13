@@ -2,15 +2,37 @@
 #include <Wire.h>
 #include <Zumo32U4.h>
 #include <PololuOLED.h>
-
+// #include <Adafruit_MPU6050.h>
+// #include <Adafruit_HMC5883_U.h>
+// #include <SoftWire.h>
+#include <SoftI2C-master/src/SoftI2C.h>
+#include <HMC5883L.h>
 
 int speed = 100;
 #define thieveThreshold 2 // Was 1.6
+#define turnThreshold 2
 #define lineThreshold 1000
 #define objThreshold 4
+
+// I2C addresses
+#define MPU6050_ADDR 0x68  // Address of MPU6050
+#define HMC5883L_ADDR 0x1E // Address of HMC5883L
+
+// MPU6050 registers
+#define MPU6050_REG_PWR_MGMT_1 0x6B
+#define MPU6050_REG_INT_PIN_CFG 0x37
+
+// HMC5883L registers
+#define HMC5883L_REG_CONFIG_A 0x00
+#define HMC5883L_REG_MODE 0x02
+#define HMC5883L_REG_DATA_X_MSB 0x03
+
 // this are the postions the robot need to check// lave om på talene senere
 const int check[3][2] = {{20, 47}, {40, 38}, {65, 10}};
+float transformationMatrix[2][2] = {{-0.00724577, -0.00242076}, {0.00220427, -0.00659776}};
+float magOffsetX = -98.54545454, magOffsetY = -338.4919786;
 const int charger[2] = {0, 0};
+int16_t mx, my, mz; // Value for storing the raw mag readings.
 
 Zumo32U4OLED display;
 Zumo32U4IMU imu;
@@ -20,6 +42,7 @@ Zumo32U4Encoders encoders;
 Zumo32U4Motors motors;
 Zumo32U4ProximitySensors proximitySensor;
 Zumo32U4LineSensors lineSenors;
+SoftI2C SoftWire(4, 20); // Instantiate a softI2C object on Zumo pins 4 and 20
 
 // variables for gyro
 int16_t gyroOffset = 0;
@@ -28,7 +51,7 @@ int16_t turnRate = 0;
 uint16_t gyroLastUpdate = 0;
 unsigned int lineSensorValues[3];
 
-float wheelCirc = 122.52/10;
+float wheelCirc = 122.52 / 10;
 float cpr = 909.7;
 
 // Postion of the robot
@@ -66,34 +89,58 @@ void newAvoid();
 bool linesensor();
 void forward2(uint16_t, uint16_t);
 void navigateRandom();
+void turnByMag(int);
+void getMag();
+float calculateMagHeading();
+void writeRegister(uint8_t, uint8_t, uint8_t);
+uint8_t readRegister(uint8_t, uint8_t);
+void readHMC5883LData(int16_t *, int16_t *, int16_t *);
+
 void setup()
 {
-  // put your setup code here, to run once:
+  delay(2000);
+
   Serial.begin(9600);
+
   display.init();
+
   turnSensorSetup();
+
   encoders.init();
+
   proximitySensor.initFrontSensor();
   uint16_t customBrightnessLevels[] = {1, 5, 10, 15, 30, 45};
   proximitySensor.setBrightnessLevels(customBrightnessLevels, 6);
-  // proximitySensor.setBrightnessLevels(proxBrightnesses,6);
+
   lineSenors.initThreeSensors();
+
+  SoftWire.begin();
+  // Initialize MPU6050
+  writeRegister(MPU6050_ADDR, MPU6050_REG_PWR_MGMT_1, 0x00); // Wake up MPU6050
+
+  // Enable I2C bypass mode
+  writeRegister(MPU6050_ADDR, MPU6050_REG_INT_PIN_CFG, 0x02);
+
+  // Initialize HMC5883L
+  writeRegister(HMC5883L_ADDR, HMC5883L_REG_CONFIG_A, 0x70); // 8-average, 15 Hz default
+  writeRegister(HMC5883L_ADDR, HMC5883L_REG_MODE, 0x00);     // Continuous measurement mode
 }
 
 void loop()
 {
-  navigateRandom();
-  delay(500);
+  Serial.println(calculateMagHeading());
+  //turnByMag(90);
+  delay(100);
 }
 
-void newAvoid(){
+void newAvoid()
+{
   turnByAngleNew(20);
-  forward2(25,150);
+  forward2(25, 150);
   turnByAngleNew(310);
-  forward2(25,150);
+  forward2(25, 150);
   turnByAngleNew(20);
   checkDist = 42.64;
-
 }
 
 /**
@@ -160,7 +207,7 @@ void stop()
  * \retval Returns the accumulated distance that the robot has traveled based on the encoder counts.
  */
 float getDistance()
-{ 
+{
   // get distance in cm
   long int countsL = encoders.getCountsLeft();
   long int countsR = encoders.getCountsRight();
@@ -313,9 +360,9 @@ void turnByAngleNew(int angleToTurn = 0)
  * \brief Rotates twice while recording values from the proximity sensors.
  * \return Returns true if a thieve is detected. Returns false if no thieve is detected
  */
-bool checkTheft() // kordnate 
+bool checkTheft() // kordnate
 {
-    
+
   // Initialise variables
   int base[9], test[9];
   uint32_t angle = 0;
@@ -326,7 +373,7 @@ bool checkTheft() // kordnate
 
   // Store the initial angle, used for offset.
   turnSensorReset();
-  //uint32_t startAngle = getTurnAngleInDegrees();
+  // uint32_t startAngle = getTurnAngleInDegrees();
 
   // Begin rotation
   motors.setSpeeds(-200, 200);
@@ -337,12 +384,12 @@ bool checkTheft() // kordnate
   while (numTurns < 2)
   {
     // Update the offsat angle and print it.
-    //angle = offsetAngValue(getTurnAngleInDegrees(), startAngle);
+    // angle = offsetAngValue(getTurnAngleInDegrees(), startAngle);
     angle = getTurnAngleInDegrees();
-         // Clears the OLED display.
-          display.clear();
-          display.gotoXY(0, 0); // Sets the position on the OLED, where the message should be printed.
-          display.print(angle);
+    // Clears the OLED display.
+    display.clear();
+    display.gotoXY(0, 0); // Sets the position on the OLED, where the message should be printed.
+    display.print(angle);
     // Serial.println("Vinkel: " + String(angle) + " numTurns: " + String(numTurns) + " Turn angle in degrees: " + String(getTurnAngleInDegrees()) + " StartAngle: " + startAngle);
 
     // Count number of full rotations
@@ -432,38 +479,40 @@ void forward(uint16_t dist = 0, uint16_t speed = 0)
 {
   int diff = 0;
   float leftEncCount = 0;
-   float rightEncCount = 0;
-    resetEncoders();
-    checkDist = 0;
+  float rightEncCount = 0;
+  resetEncoders();
+  checkDist = 0;
   while (getDistance() + checkDist < dist)
   {
 
     bool check = false;
-     check = checkSurroundings();
-     leftEncCount = encoders.getCountsLeft();
-     rightEncCount = encoders.getCountsRight();
+    check = checkSurroundings();
+    leftEncCount = encoders.getCountsLeft();
+    rightEncCount = encoders.getCountsRight();
 
-    //display.clear();      // Clears the OLED display.
-      display.gotoXY(0, 0); // Sets the position on the OLED, where the message should be printed.
-      display.print(getDistance());
-       
-      if(check){
-         diff = leftEncCount - rightEncCount;
-        float distanceL = leftEncCount / 900.0 * (wheelCirc / 10);
-        float distanceR = rightEncCount / 900.0 * (wheelCirc / 10);
+    // display.clear();      // Clears the OLED display.
+    display.gotoXY(0, 0); // Sets the position on the OLED, where the message should be printed.
+    display.print(getDistance());
 
-         checkDist = checkDist + (distanceL + distanceR) / 2;
-      }
-      else{
+    if (check)
+    {
+      diff = leftEncCount - rightEncCount;
+      float distanceL = leftEncCount / 900.0 * (wheelCirc / 10);
+      float distanceR = rightEncCount / 900.0 * (wheelCirc / 10);
 
-        diff = encoders.getCountsLeft() - encoders.getCountsRight();
-      }
+      checkDist = checkDist + (distanceL + distanceR) / 2;
+    }
+    else
+    {
 
-     // rest encode so surround don't effect distance 
+      diff = encoders.getCountsLeft() - encoders.getCountsRight();
+    }
+
+    // rest encode so surround don't effect distance
     /*
     If right is ahead, diff is negative. If right is behind, diff is positive.
     */
-    
+
     // Serial.println(diff);
     int compSpeed = speed + diff * 5;
     motors.setSpeeds(speed, compSpeed);
@@ -489,24 +538,24 @@ void forward2(uint16_t dist = 0, uint16_t speed = 0)
 {
   int diff = 0;
   float leftEncCount = 0;
-   float rightEncCount = 0;
-    resetEncoders();
-    checkDist = 0;
+  float rightEncCount = 0;
+  resetEncoders();
+  checkDist = 0;
   while (getDistance() + checkDist < dist)
   {
     bool check = false;
-     leftEncCount = encoders.getCountsLeft();
-     rightEncCount = encoders.getCountsRight();
+    leftEncCount = encoders.getCountsLeft();
+    rightEncCount = encoders.getCountsRight();
 
-    //display.clear();      // Clears the OLED display.
-      
-      diff = encoders.getCountsLeft() - encoders.getCountsRight();
+    // display.clear();      // Clears the OLED display.
 
-     // rest encde so surround don't effect distance 
+    diff = encoders.getCountsLeft() - encoders.getCountsRight();
+
+    // rest encde so surround don't effect distance
     /*
     If right is ahead, diff is negative. If right is behind, diff is positive.
     */
-    
+
     // Serial.println(diff);
     int compSpeed = speed + diff * 5;
     motors.setSpeeds(speed, compSpeed);
@@ -527,7 +576,6 @@ void forward2(uint16_t dist = 0, uint16_t speed = 0)
   display.print(robotposy); // 46
   */
 }
-
 
 // Avoid collision with a object by going around it, return true when done.
 void avoid()
@@ -579,23 +627,22 @@ bool detectObject()
   int leftReading = proximitySensor.countsFrontWithLeftLeds();
   int rightReading = proximitySensor.countsFrontWithRightLeds();
 
-    
   if (leftReading >= objThreshold || rightReading >= objThreshold)
   {
 
     display.clear();      // Clears the OLED display.
     display.gotoXY(0, 0); // Sets the position on the OLED, where the message should be printed.
-   display.print("theft");
+    display.print("theft");
     if (!checkTheft())
     {
-      //avoid();
-       display.clear();      // Clears the OLED display.
+      // avoid();
+      display.clear();      // Clears the OLED display.
       display.gotoXY(0, 0); // Sets the position on the OLED, where the message should be printed.
       display.print("avoid");
 
-     newAvoid();
-      
-       /// Husk !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+      newAvoid();
+
+      /// Husk !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
     }
     /*
                                   // If the sensor readings is more or equal to the threshold value, then the robot should print "Obstacle ahead!" to the OLED.
@@ -606,18 +653,14 @@ bool detectObject()
     display.print(F("ahead!"));   // Prints "ahead!".
     return true;
     */
-   
-   resetEncoders();
-   return true;
+
+    resetEncoders();
+    return true;
   }
   return false;
 }
 
-
-
-
 // Robot detects if any object is infront of it, returns true if a object is present.
-
 
 bool linesensor()
 {
@@ -640,7 +683,6 @@ bool linesensor()
     turnByAngleNew(rand);
     resetEncoders();
     return true;
-    
   }
   return false;
 
@@ -688,7 +730,7 @@ bool linesensor()
 }
 
 bool checkSurroundings()
-{  
+{
   bool check = false;
   check = linesensor();
   display.clear();      // Clears the OLED display.
@@ -707,11 +749,11 @@ void MoveToPos(int x = 0, int y = 0)
   display.clear();      // Clears the OLED display.
   display.gotoXY(0, 0); // Sets the position on the OLED, where the message should be printed.
   display.print("x: " + String(robotposx));
- 
+
   display.gotoXY(0, 1); // Sets the position on the OLED, where the message should be printed.
   display.print("y: " + String(robotposy));
 
-    delay(1000);
+  delay(1000);
 
   // varibel for the vektor
   int newposx = 0;
@@ -748,15 +790,14 @@ void MoveToPos(int x = 0, int y = 0)
   display.clear();      // Clears the OLED display.
   display.gotoXY(0, 0); // Sets the position on the OLED, where the message should be printed.
   display.print("newx: " + String(newposx));
- 
+
   display.gotoXY(0, 1); // Sets the position on the OLED, where the message should be printed.
   display.print("newy: " + String(newposy));
   delay(1500);
-  
 
   // angle get round up it float return get convert to int
-  angle = abs(robotangle-(atan2(newposy, newposx) * (180 / PI)));   // makes angle from the vektor
-  dist = sqrt(pow(newposx, 2) + pow(newposy, 2)); // find length of the vektor
+  angle = abs(robotangle - (atan2(newposy, newposx) * (180 / PI))); // makes angle from the vektor
+  dist = sqrt(pow(newposx, 2) + pow(newposy, 2));                   // find length of the vektor
   if (angle < 0)
   {
     angle = 360 + angle;
@@ -765,10 +806,10 @@ void MoveToPos(int x = 0, int y = 0)
   display.clear();      // Clears the OLED display.
   display.gotoXY(0, 0); // Sets the position on the OLED, where the message should be printed.
   display.print("V: " + String(angle));
- 
+
   display.gotoXY(0, 1); // Sets the position on the OLED, where the message should be printed.
   display.print("D: " + String(dist));
-  
+
   delay(1000);
 
   Serial.println("newposx: ");
@@ -852,9 +893,98 @@ void turnRandom()
   delay(1000);
 }
 
-void navigateRandom(){
-  int randDist = random(10,100);
-  int randSpeed = random(100,200);
+void navigateRandom()
+{
+  int randDist = random(10, 100);
+  int randSpeed = random(100, 200);
   turnRandom();
   forward(randDist, randSpeed);
+}
+
+void turnByMag(int angle)
+{
+  float initHead = calculateMagHeading();
+  turnByAngleNew(angle);
+  float obtainedHead = calculateMagHeading();
+  float magDiff = obtainedHead - initHead;
+int f;
+if (magDiff>angle)
+{
+f = 360 - (magDiff-angle);
+}
+if(angle>magDiff){
+f = angle - magDiff;
+}
+
+
+  Serial.print("Heading Error: " + String(f));
+  if (abs(magDiff)-angle > turnThreshold)
+  {
+    turnByMag(f);
+  }
+}
+
+void getMag()
+{
+  // Reads the magnetometer and stores the raw data in the global variables.
+  readHMC5883LData(&mx, &my, &mz);
+}
+
+float calculateMagHeading()
+{
+  getMag();
+
+  // Step 1: Offset correction
+  float centeredX = mx - magOffsetX;
+  float centeredY = my - magOffsetY;
+
+  // Step 2: Apply the transformation matrix
+  float calibratedX = transformationMatrix[0][0] * centeredX + transformationMatrix[0][1] * centeredY;
+  float calibratedY = transformationMatrix[1][0] * centeredX + transformationMatrix[1][1] * centeredY;
+
+  // Serial.println('$' + String(imu.m.x) + ' ' + String(imu.m.y) + ' ' + String(imu.m.z) + ' ' + String(calibratedX) + ' ' + String(calibratedY) + ';');
+
+  // Calculate the heading in radians
+  float heading = atan2(calibratedX, calibratedY);
+
+  // Convert radians to degrees
+  float headingDegrees = heading * (180.0 / M_PI);
+
+  // Normalize to 0-360 degrees
+  if (headingDegrees < 0)
+  {
+    headingDegrees += 360.0;
+  }
+
+  return headingDegrees;
+}
+
+void writeRegister(uint8_t deviceAddress, uint8_t regAddress, uint8_t value)
+{
+  SoftWire.beginTransmission(deviceAddress);
+  SoftWire.write(regAddress);
+  SoftWire.write(value);
+  SoftWire.endTransmission();
+}
+
+uint8_t readRegister(uint8_t deviceAddress, uint8_t regAddress)
+{
+  SoftWire.beginTransmission(deviceAddress);
+  SoftWire.write(regAddress);
+  SoftWire.endTransmission(false);
+
+  SoftWire.requestFrom(deviceAddress, (uint8_t)1);
+  return SoftWire.read();
+}
+
+void readHMC5883LData(int16_t *x, int16_t *y, int16_t *z)
+{
+  SoftWire.beginTransmission(HMC5883L_ADDR);
+  SoftWire.write(HMC5883L_REG_DATA_X_MSB);
+  SoftWire.endTransmission(false);
+
+  SoftWire.requestFrom(HMC5883L_ADDR, (int)6);
+  *x = (SoftWire.read() << 8) | SoftWire.read();
+  *z = (SoftWire.read() << 8) | SoftWire.read();
+  *y = (SoftWire.read() << 8) | SoftWire.read();
 }
