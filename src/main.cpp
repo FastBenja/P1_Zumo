@@ -10,9 +10,9 @@
 
 int speed = 100;
 #define thieveThreshold 2 // Was 1.6
-#define turnThreshold 2
 #define lineThreshold 1000
 #define objThreshold 5
+#define turnThreshold 2
 
 // I2C addresses
 #define MPU6050_ADDR 0x68  // Address of MPU6050
@@ -142,9 +142,8 @@ void setup()
 
 void loop()
 {
-  Serial.println(calculateMagHeading());
-  // turnByMag(90);
-  delay(100);
+  navigateRandom();
+  delay(1000);
 }
 
 void newAvoid()
@@ -922,34 +921,37 @@ void navigateRandom()
   delay(50);
 }
 
-void randomMovement()
-{
-  for (int i = 0; i < 6; i++)
-  {
-    display.clear();
-    delay(500);
-    int rNumber = random(1, 5);
-    display.gotoXY(0, 0);
-    display.print(rNumber);
-    delay(1000);
-    switch (rNumber)
+void randomMovement(){
+    for (int i = 0; i <6; i++)
     {
-    case (1):
-      forward2(20, 100);
+      display.clear();
+      delay(500);
+      int caseNumber = random(1,3);
+      int distRandom = random(10,50);
+      int speedRandom = random(25, 200);
+      int turnR = (10, 359);
+      display.gotoXY(0,0);
+      display.print(caseNumber);
+      delay(1000);
+      switch (caseNumber)
+      {
+      case(1):
+      display.clear();
+      display.gotoXY(0,0);
+      display.print(distRandom);
+      display.gotoXY(0,1);
+      display.print(speedRandom);
+        forward2(distRandom, speed);
       break;
-    case (2):
-      backward(20, 100);
+      case(2):
+      display.clear();
+      display.gotoXY(0,0);
+      display.print(turnR);
+        turnByAngleNew(turnR);
+        delay(1500);
       break;
-    case (3):
-      turnByAngleNew(90);
-      delay(1500);
-      break;
-    case (4):
-      turnByAngleNew(180);
-      break;
-      delay(1500);
+      }
     }
-  }
 }
 
 void turnByMag(int angle)
