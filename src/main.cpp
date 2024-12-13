@@ -891,28 +891,29 @@ void navigateRandom(){
 void randomMovement(){
     for (int i = 0; i <6; i++)
     {
+      int caseNumber = random(1,3);
+      int distRandom = random(5,50);
+      int turnRandom = random(10,359);
       display.clear();
-      delay(500);
-      int rNumber = random(1,5);
       display.gotoXY(0,0);
-      display.print(rNumber);
+      display.print(caseNumber);
       delay(1000);
-      switch (rNumber)
+      switch (caseNumber)
       {
       case(1):
-        forward2(20, 100);
+        display.clear();
+        display.gotoXY(0,0);
+        display.print(distRandom);
+        forward(distRandom, 100);
       break;
+      
       case(2):
-        backward(20,100);
+        display.clear();
+        display.gotoXY(0,0);
+        display.print(turnRandom);
+        turnByAngleNew(turnRandom);
       break;
-      case(3):
-        turnByAngleNew(90);
-        delay(1500);
-      break;
-      case(4):
-        turnByAngleNew(180);
-      break;
-      delay(1500);
       }
+      delay(1500);
     }
 }
