@@ -7,6 +7,7 @@
 // #include <SoftWire.h>
 #include <SoftI2C-master/src/SoftI2C.h>
 #include <HMC5883L.h>
+#include <PID_v1.h>
 
 int speed = 100;
 #define thieveThreshold 3 // Was 1.6
@@ -20,26 +21,32 @@ int speed = 100;
 #define HMC5883L_ADDR 0x1E // Address of HMC5883L
 
 // MPU6050 registers
-#define MPU6050_REG_PWR_MGMT_1 0x6B //For waking up the MPU
-#define MPU6050_REG_INT_PIN_CFG 0x37 //For bypassing the i2c bus
+#define MPU6050_REG_PWR_MGMT_1 0x6B  // For waking up the MPU
+#define MPU6050_REG_INT_PIN_CFG 0x37 // For bypassing the i2c bus
 
 // HMC5883L registers
-#define HMC5883L_REG_CONFIG_A 0x00 //Config
-#define HMC5883L_REG_MODE 0x02 //Config
-#define HMC5883L_REG_DATA_X_MSB 0x03 //Data
+#define HMC5883L_REG_CONFIG_A 0x00   // Config
+#define HMC5883L_REG_MODE 0x02       // Config
+#define HMC5883L_REG_DATA_X_MSB 0x03 // Data
 
-//These are the postions the robot need to check - lave om på talene senere
+// These are the postions the robot need to check - lave om på talene senere
 const int check[3][2] = {{20, 47}, {40, 38}, {65, 10}};
 
-//Calculated transformation matrix ans offset for magnetometer correction
+// Calculated transformation matrix ans offset for magnetometer correction
 float transformationMatrix[2][2] = {{-0.00724577, -0.00242076}, {0.00220427, -0.00659776}};
 float magOffsetX = -98.54545454, magOffsetY = -338.4919786;
 
-//Charging station location in X,Y coordinates
+// Charging station location in X,Y coordinates
 const int charger[2] = {0, 0};
 
 // Values for storing the raw mag readings.
-int16_t mx, my, mz; 
+int16_t mx, my, mz;
+
+// Define Variables for PID
+double pidSetpoint, pidInput, pidOutput;
+
+// Specify the parameters for PID
+double Kp = 4, Ki = 6, Kd = 0;
 
 Zumo32U4OLED display;
 Zumo32U4IMU imu;
@@ -50,6 +57,7 @@ Zumo32U4Motors motors;
 Zumo32U4ProximitySensors proximitySensor;
 Zumo32U4LineSensors lineSenors;
 SoftI2C SoftWire(4, 20); // Instantiate a softI2C object on Zumo pins 4 and 20
+PID myPID(&pidInput, &pidOutput, &pidSetpoint, Kp, Ki, Kd, DIRECT);
 
 // variables for gyro
 int16_t gyroOffset = 0;
@@ -76,7 +84,7 @@ int i = 0;
 
 // Function definitions:
 void ALARM(uint32_t);
-int offsetAngValue(int, int);
+float offsetAngValue(float, float);
 void resetEncoders();
 void stop();
 float getDistance();
@@ -98,13 +106,14 @@ void newAvoid();
 bool linesensor();
 void forward2(uint16_t, uint16_t);
 void navigateRandom();
-void turnByMag(int);
+void turnByMag(float, float);
 void getMag();
-float calculateMagHeading();
+float getMagHeading();
 void writeRegister(uint8_t, uint8_t, uint8_t);
 uint8_t readRegister(uint8_t, uint8_t);
 void readHMC5883LData(int16_t *, int16_t *, int16_t *);
 void randomMovement();
+float calculateAngleError(float, float);
 
 void setup()
 {
@@ -141,17 +150,16 @@ void setup()
   imu.configureForTurnSensing();
   uint32_t seed = imu.m.x ^ micros(); // Kombiner IMU-data med tid
   randomSeed(seed);
+
+  // Setup PID
+  myPID.SetOutputLimits(-400, 400);
+  myPID.SetMode(AUTOMATIC);
 }
 
 void loop()
 {
-  while (i < 1){
-    i++;
-    MoveToPos(40,40);
-  }
-  delay(500);
-  navigateRandom();
-  delay(50);
+  turnByMag(270, 0.5);
+  delay(2000);
 }
 
 void newAvoid()
@@ -198,16 +206,33 @@ void ALARM(uint32_t time = 3000)
  * \param offset The amount to offset the angle
  * \retval Offsat angle wrapped back to 0.
  **/
-int offsetAngValue(int value, int offset)
+float offsetAngValue(float value, float offset)
 {
   // Add offset and wrap within 0-359 range
-  int newValue = (value + offset) % 360;
+  float newValue = fmod(value + offset, 360);
   // If result is negative, wrap it to 359
   if (newValue < 0)
   {
     newValue += 360;
   }
   return newValue;
+}
+
+float calculateAngleError(float currentAngle, float setpointAngle)
+{
+  float error = setpointAngle - currentAngle;
+
+  // Wrap the error to the range -180 to 180
+  if (error > 180)
+  {
+    error -= 360;
+  }
+  else if (error < -180)
+  {
+    error += 360;
+  }
+
+  return error;
 }
 
 /** \brief Resets the encoder counts.
@@ -286,6 +311,7 @@ void test()
     MoveToPos(check[0][i], check[1][i]);
   }
 }
+*/
 
 /* Read the gyro and update the angle.  This should be called as
  frequently as possible while using the gyro to do turns.*/
@@ -376,8 +402,8 @@ void turnByAngleNew(int angleToTurn = 0)
     }
   }
   robotangle = offsetAngValue(robotangle, ang);
-  motors.setSpeeds(0, 0);                                  // Stop
-  Serial.println("Turned to: " + String(ang) + "Degrees"); // Print resulting angle
+  motors.setSpeeds(0, 0);                                            // Stop
+  Serial.println("Turned by angle to: " + String(ang) + " Degrees"); // Print resulting angle
 }
 
 /**
@@ -929,60 +955,106 @@ void navigateRandom()
   delay(50);
 }
 
-void randomMovement(){
-    for (int i = 0; i <6; i++)
-    {
-      display.clear();
-      delay(500);
-      int caseNumber = random(1,3);
-      int distRandom = random(10,50);
-      int speedRandom = random(25, 200);
-      int turnR = (10, 359);
-      display.gotoXY(0,0);
-      display.print(caseNumber);
-      delay(1000);
-      switch (caseNumber)
-      {
-      case(1):
-      display.clear();
-      display.gotoXY(0,0);
-      display.print(distRandom);
-      display.gotoXY(0,1);
-      display.print(speedRandom);
-        forward2(distRandom, speed);
-      break;
-      case(2):
-      display.clear();
-      display.gotoXY(0,0);
-      display.print(turnR);
-        turnByAngleNew(turnR);
-        delay(1500);
-      break;
-      }
-    }
+void randomMovement()
+{
+  /*  for (int i = 0; i < 6; i++)
+   {
+     int caseNumber = random(1, 3);
+     int distRandom = random(5, 50);
+     int turnRandom = random(10, 359);
+     display.clear();
+     delay(500);
+     int caseNumber = random(1, 3);
+     int distRandom = random(10, 50);
+     int speedRandom = random(25, 200);
+     int turnR = (10, 359);
+     display.gotoXY(0, 0);
+     display.print(caseNumber);
+     display.print(caseNumber);
+     delay(1000);
+     switch (caseNumber)
+     {
+     case (1):
+       display.clear();
+       display.gotoXY(0, 0);
+       display.print(distRandom);
+       forward(distRandom, 100);
+       display.clear();
+       display.gotoXY(0, 0);
+       display.print(distRandom);
+       display.gotoXY(0, 1);
+       display.print(speedRandom);
+       forward2(distRandom, speed);
+       break;
+
+     case (2):
+       display.clear();
+       display.gotoXY(0, 0);
+       display.print(turnR);
+       turnByAngleNew(turnR);
+       delay(1500);
+       break;
+     }
+   } */
 }
 
-void turnByMag(int angle)
+void turnByMag(float angle, float maxError)
 {
-  float initHead = calculateMagHeading();
-  turnByAngleNew(angle);
-  float obtainedHead = calculateMagHeading();
-  float magDiff = obtainedHead - initHead;
-  int f;
-  if (magDiff > angle)
+  // Get the initial heading
+  float initHead = getMagHeading();
+  Serial.println("InitHead: " + String(initHead));
+
+  // Calculate the target (final) heading
+  float finalHeading = initHead + angle;
+
+  // Normalize the target heading to 0–359.999
+  if (finalHeading >= 360.0)
   {
-    f = 360 - (magDiff - angle);
+    finalHeading -= 360.0;
   }
-  if (angle > magDiff)
+  else if (finalHeading < 0.0)
   {
-    f = angle - magDiff;
+    finalHeading += 360.0;
+  }
+  Serial.println("Target/FinalHead: " + String(finalHeading));
+
+  // Allow some time for the robot to begin turning
+  delay(3000);
+
+//Try resetting the PID
+  myPID.SetMode(MANUAL);
+  myPID.SetMode(AUTOMATIC);
+
+  // Enter the loop to correct heading
+  while (true)
+  {
+    // Read the current heading
+    float obtainedHead = getMagHeading();
+
+    // Calculate the error using the wrapped error function
+    float error = calculateAngleError(obtainedHead, finalHeading);
+
+    // Use the error as input for the PID controller
+    pidInput = error;
+    pidSetpoint = 0; // PID should drive the error to 0
+    myPID.Compute();
+
+    // Apply the PID output to the motors
+    motors.setSpeeds(pidOutput, -pidOutput);
+
+    Serial.println("Current Error: " + String(error) + " Current pidOut: " + String(pidOutput));
+
+    // If the error is within the allowed range, stop the motors and exit
+    if (abs(error) <= maxError)
+    {
+      motors.setSpeeds(0, 0);
+      break;
+    }
   }
 
-  Serial.print("Heading Error: " + String(f));
-  if (abs(magDiff) - angle > turnThreshold)
-  {
-    turnByMag(f);
-  }
+  // Print the final heading for debugging
+  float endHead = getMagHeading();
+  Serial.println("EndHead: " + String(endHead));
 }
 
 void getMag()
@@ -991,7 +1063,7 @@ void getMag()
   readHMC5883LData(&mx, &my, &mz);
 }
 
-float calculateMagHeading()
+float getMagHeading()
 {
   getMag();
 
