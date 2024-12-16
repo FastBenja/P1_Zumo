@@ -46,7 +46,7 @@ int16_t mx, my, mz;
 double pidSetpoint, pidInput, pidOutput;
 
 // Specify the parameters for PID
-double Kp = 4, Ki = 6, Kd = 0;
+double Kp = 1, Ki = 2, Kd = 0.25;
 
 Zumo32U4OLED display;
 Zumo32U4IMU imu;
@@ -158,8 +158,18 @@ void setup()
 
 void loop()
 {
-  turnByMag(270, 0.5);
-  delay(2000);
+  ledRed(LOW);
+  turnByMag(230, 0.25);
+  delay(500);
+  turnByMag(80, 0.25);
+  delay(500);
+  turnByMag(290, 0.25);
+  delay(500);
+  turnByMag(40, 0.25);
+  delay(500);
+  turnByMag(150, 0.25);
+  ledRed(HIGH);
+  buttonA.waitForPress();
 }
 
 void newAvoid()
