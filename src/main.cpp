@@ -1022,6 +1022,9 @@ void turnByMag(float angle, float maxError)
   myPID.SetMode(MANUAL);
   myPID.SetMode(AUTOMATIC);
 
+
+  bool inOkBand = false;
+  unsigned long startMark;
   // Enter the loop to correct heading
   while (true)
   {
@@ -1041,8 +1044,16 @@ void turnByMag(float angle, float maxError)
 
     Serial.println("Current Error: " + String(error) + " Current pidOut: " + String(pidOutput));
 
+    if(abs(error) <= maxError && !inOkBand){
+      startMark = millis();
+      inOkBand = true;
+    }
+    else{
+      inOkBand = false;
+    }
+
     // If the error is within the allowed range, stop the motors and exit
-    if (abs(error) <= maxError)
+    if (abs(error) <= maxError && startMark + 2000 > millis())
     {
       motors.setSpeeds(0, 0);
       break;
