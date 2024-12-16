@@ -9,7 +9,7 @@
 #include <HMC5883L.h>
 
 int speed = 100;
-#define thieveThreshold 4 // Was 1.6
+#define thieveThreshold 3 // Was 1.6
 #define turnThreshold 2
 #define lineThreshold 1000
 #define objThreshold 5
@@ -400,7 +400,7 @@ bool checkTheft() // kordnate
   // uint32_t startAngle = getTurnAngleInDegrees();
 
   // Begin rotation
-  motors.setSpeeds(-200, 200);
+  motors.setSpeeds(-150, 150);
 
   // Record a value for each 40 degrees (9 measurements) save it in base list.
   // Next repeat the measurement but save the result in test list.
