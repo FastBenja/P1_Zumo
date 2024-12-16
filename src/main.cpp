@@ -10,7 +10,8 @@
 #include <PID_v1.h>
 
 int speed = 100;
-#define thieveThreshold 2 // Was 1.6
+#define thieveThreshold 3 // Was 1.6
+#define turnThreshold 2
 #define lineThreshold 1000
 #define objThreshold 5
 #define turnThreshold 2
@@ -78,6 +79,8 @@ int checkposy = 0;
 
 int avoidDist = 15;
 float checkDist = 0;
+
+int i = 0;
 
 // Function definitions:
 void ALARM(uint32_t);
@@ -162,9 +165,9 @@ void loop()
 void newAvoid()
 {
   turnByAngleNew(20);
-  forward2(25, 150);
+  forward(25, 150);
   turnByAngleNew(310);
-  forward2(25, 150);
+  forward(25, 150);
   turnByAngleNew(20);
   checkDist = 42.64;
 }
@@ -423,7 +426,7 @@ bool checkTheft() // kordnate
   // uint32_t startAngle = getTurnAngleInDegrees();
 
   // Begin rotation
-  motors.setSpeeds(-200, 200);
+  motors.setSpeeds(-150, 150);
 
   // Record a value for each 40 degrees (9 measurements) save it in base list.
   // Next repeat the measurement but save the result in test list.
