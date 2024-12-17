@@ -1,20 +1,14 @@
-#include <Arduino.h>
-#include <Wire.h>
-#include <Zumo32U4.h>
-#include <PololuOLED.h>
-// #include <Adafruit_MPU6050.h>
-// #include <Adafruit_HMC5883_U.h>
-// #include <SoftWire.h>
-#include <SoftI2C-master/src/SoftI2C.h>
-#include <HMC5883L.h>
-#include <PID_v1.h>
+// Include libareis
+#include <Arduino.h>                    //For standard arduino functionallity
+#include <Zumo32U4.h>                   //For easily interfacing with the Zumo platform
+#include <Wire.h>                       //Dependency for Zumo32U4 used to communicate with IMU
+#include <SoftI2C-master/src/SoftI2C.h> //For bitbanging a I2C bus
+#include <PID_v1.h>                     //For closed loop control
 
-int speed = 100;
-#define thieveThreshold 3 // Was 1.6
-#define turnThreshold 2
-#define lineThreshold 1000
-#define objThreshold 5
-#define turnThreshold 2
+int speed = 100;           // Target Zumo speed
+#define thieveThreshold 3  // Maximum difference in measurements before detecting a thieve
+#define lineThreshold 1000 // Threshold for detecting a line
+#define objThreshold 5     // Threshold for detecting a object
 
 // I2C addresses
 #define MPU6050_ADDR 0x68  // Address of MPU6050
@@ -22,14 +16,14 @@ int speed = 100;
 
 // MPU6050 registers
 #define MPU6050_REG_PWR_MGMT_1 0x6B  // For waking up the MPU
-#define MPU6050_REG_INT_PIN_CFG 0x37 // For bypassing the i2c bus
+#define MPU6050_REG_INT_PIN_CFG 0x37 // For bypassing the I2C bus
 
 // HMC5883L registers
 #define HMC5883L_REG_CONFIG_A 0x00   // Config
 #define HMC5883L_REG_MODE 0x02       // Config
-#define HMC5883L_REG_DATA_X_MSB 0x03 // Data
+#define HMC5883L_REG_DATA_X_MSB 0x03 // Data first byte
 
-// These are the postions the robot need to check - lave om på talene senere
+// These are the postions the robot need to check
 const int check[3][2] = {{20, 47}, {40, 38}, {65, 10}};
 
 // Calculated transformation matrix ans offset for magnetometer correction
@@ -42,45 +36,51 @@ const int charger[2] = {0, 0};
 // Values for storing the raw mag readings.
 int16_t mx, my, mz;
 
-// Define Variables for PID
+// Variables for PID
 double pidSetpoint, pidInput, pidOutput;
 
-// Specify the parameters for PID
+// Parameters for PID
 double Kp = 1, Ki = 2, Kd = 0.25;
-
-Zumo32U4OLED display;
-Zumo32U4IMU imu;
-Zumo32U4ButtonA buttonA;
-Zumo32U4Buzzer buzzer;
-Zumo32U4Encoders encoders;
-Zumo32U4Motors motors;
-Zumo32U4ProximitySensors proximitySensor;
-Zumo32U4LineSensors lineSenors;
-SoftI2C SoftWire(4, 20); // Instantiate a softI2C object on Zumo pins 4 and 20
-PID myPID(&pidInput, &pidOutput, &pidSetpoint, Kp, Ki, Kd, DIRECT);
 
 // variables for gyro
 int16_t gyroOffset = 0;
 uint32_t turnAngle = 0;
 int16_t turnRate = 0;
 uint16_t gyroLastUpdate = 0;
+
+// Variable to sore linesensor measurements
 unsigned int lineSensorValues[3];
 
+// Variables for wheel dimensions and encoder counts pr revolution
 float wheelCirc = 122.52 / 10;
 float cpr = 909.7;
 
-// Postion of the robot
+// Variables to store the postion of the robot
 int robotposx = 0;
 int robotposy = 0;
 int robotangle = 0;
 
+// Variables to store a robot position
 int checkposx = 0;
 int checkposy = 0;
 
+// Variable to set the size of the object that the robot should go around
 int avoidDist = 15;
+
+// Variable to store how long the robot have traveled in a specific move
 float checkDist = 0;
 
-int i = 0;
+// Instantiation of objects
+Zumo32U4OLED display;                                               // Display
+Zumo32U4IMU imu;                                                    // IMU (Internal Measurement Unit)
+Zumo32U4ButtonA buttonA;                                            // Button A
+Zumo32U4Buzzer buzzer;                                              // Buzzer
+Zumo32U4Encoders encoders;                                          // Encoders
+Zumo32U4Motors motors;                                              // Motors
+Zumo32U4ProximitySensors proximitySensor;                           // Proximity sensors
+Zumo32U4LineSensors lineSenors;                                     // Linesensors
+SoftI2C SoftWire(4, 20);                                            // SoftI2C object on Zumo pins 4 and 20
+PID myPID(&pidInput, &pidOutput, &pidSetpoint, Kp, Ki, Kd, DIRECT); // PID for closed loop mag turning
 
 // Function definitions:
 void ALARM(uint32_t);
@@ -117,43 +117,35 @@ float calculateAngleError(float, float);
 
 void setup()
 {
-  delay(2000);
+  Serial.begin(9600);                                             // Initialize the serial monitor
+  display.init();                                                 // Initialize the display
+  turnSensorSetup();                                              // Initialize and setup the turn-sensor
+  encoders.init();                                                // Initialize encoders
+  proximitySensor.initFrontSensor();                              // initialize proximity-sensors
+  uint16_t customBrightnessLevels[] = {1, 5, 10, 15, 30, 45};     // Define custom brightnesses for proximity-sensor emmitters
+  proximitySensor.setBrightnessLevels(customBrightnessLevels, 6); // Set custom brightnesses for proximity-sensor emmitters
+  lineSenors.initThreeSensors();                                  // Initialize linesensors
+  SoftWire.begin();                                               // Initialize bit-banging
 
-  Serial.begin(9600);
-
-  display.init();
-
-  turnSensorSetup();
-
-  encoders.init();
-
-  proximitySensor.initFrontSensor();
-  uint16_t customBrightnessLevels[] = {1, 5, 10, 15, 30, 45};
-  proximitySensor.setBrightnessLevels(customBrightnessLevels, 6);
-
-  lineSenors.initThreeSensors();
-
-  SoftWire.begin();
   // Initialize MPU6050
   writeRegister(MPU6050_ADDR, MPU6050_REG_PWR_MGMT_1, 0x00); // Wake up MPU6050
 
   // Enable I2C bypass mode
-  writeRegister(MPU6050_ADDR, MPU6050_REG_INT_PIN_CFG, 0x02);
+  writeRegister(MPU6050_ADDR, MPU6050_REG_INT_PIN_CFG, 0x02); // Bypass I2C ON
 
   // Initialize HMC5883L
-  writeRegister(HMC5883L_ADDR, HMC5883L_REG_CONFIG_A, 0x70); // 8-average, 15 Hz default
+  writeRegister(HMC5883L_ADDR, HMC5883L_REG_CONFIG_A, 0x70); // Average of 8 measurements, 15 Hz default
   writeRegister(HMC5883L_ADDR, HMC5883L_REG_MODE, 0x00);     // Continuous measurement mode
 
-  imu.init();
-  Wire.begin();
-  imu.enableDefault();
-  imu.configureForTurnSensing();
-  uint32_t seed = imu.m.x ^ micros(); // Kombiner IMU-data med tid
-  randomSeed(seed);
+  Wire.begin();                       // Initialize default I2C bus
+  imu.init();                         // Initialize IMU
+  imu.enableDefault();                // Enable IMU as default
+  imu.configureForTurnSensing();      // Setup IMU for turn-sensing
+  uint32_t seed = imu.m.x ^ micros(); // Seed random algorithm
 
   // Setup PID
-  myPID.SetOutputLimits(-400, 400);
-  myPID.SetMode(AUTOMATIC);
+  myPID.SetOutputLimits(-400, 400); // Set output limits to motor input range.
+  myPID.SetMode(AUTOMATIC);         // Configure for AUTO
 }
 
 void loop()
@@ -172,13 +164,16 @@ void loop()
   buttonA.waitForPress();
 }
 
+/**
+ * \brief Execuetes a triangular avoid move
+ */
 void newAvoid()
 {
-  turnByAngleNew(20);
+  turnByMag(20, 0.25);
   forward(25, 150);
-  turnByAngleNew(310);
+  turnByMag(310, 0.25);
   forward(25, 150);
-  turnByAngleNew(20);
+  turnByMag(20, 0.25);
   checkDist = 42.64;
 }
 
@@ -187,7 +182,6 @@ void newAvoid()
  * \param time Duration in ms that the alarm should sound (Best if devisible by 300)
  * otherwise the duration will be prolonged until the time in ms is divisible by 300
  */
-
 void ALARM(uint32_t time = 3000)
 {
   uint32_t startTime = millis();
@@ -228,6 +222,11 @@ float offsetAngValue(float value, float offset)
   return newValue;
 }
 
+/** \brief Function takes an angle from 0 to 360 and calculates the shortest angle from the current to the setpoint angle.
+ * \param currentAngle The current absolute angle of the robot
+ * \param setpointAngle The desired angle the robot should obtain
+ * \retval The shortest angle from the current to the setpoint
+ **/
 float calculateAngleError(float currentAngle, float setpointAngle)
 {
   float error = setpointAngle - currentAngle;
@@ -260,8 +259,10 @@ void stop()
   motors.setSpeeds(0, 0);
 }
 
-// retval Returns the accumulated distance that the robot has traveled based on the encoder counts.
-
+/**
+ * \brief
+ * \retval Returns the accumulated distance that the robot has traveled in cm, based on the encoder counts.
+ */
 float getDistance()
 {
   // get distance in cm
@@ -910,7 +911,7 @@ Gyro setup and convenience functions
 */
 void turnSensorSetup()
 {
-  Wire.begin();
+  // Wire.begin();
   imu.init();
   imu.enableDefault();
   imu.configureForTurnSensing();
@@ -1031,10 +1032,9 @@ void turnByMag(float angle, float maxError)
   // Allow some time for the robot to begin turning
   delay(3000);
 
-//Try resetting the PID
+  // Try resetting the PID
   myPID.SetMode(MANUAL);
   myPID.SetMode(AUTOMATIC);
-
 
   bool inOkBand = false;
   unsigned long startMark;
@@ -1057,11 +1057,13 @@ void turnByMag(float angle, float maxError)
 
     Serial.println("Current Error: " + String(error) + " Current pidOut: " + String(pidOutput));
 
-    if(abs(error) <= maxError && !inOkBand){
+    if (abs(error) <= maxError && !inOkBand)
+    {
       startMark = millis();
       inOkBand = true;
     }
-    else{
+    else
+    {
       inOkBand = false;
     }
 
