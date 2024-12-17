@@ -141,6 +141,7 @@ void setup()
   imu.enableDefault();                // Enable IMU as default
   imu.configureForTurnSensing();      // Setup IMU for turn-sensing
   uint32_t seed = imu.m.x ^ micros(); // Seed random algorithm
+  randomSeed(seed);
 
   // Setup PID
   myPID.SetOutputLimits(-400, 400); // Set output limits to motor input range.
