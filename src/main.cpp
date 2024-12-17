@@ -89,7 +89,6 @@ void resetEncoders();
 void stop();
 float getDistance();
 void backwards(int, int);
-void pose(int, int);
 void savePos();
 void turnSensorUpdate();
 bool detectObject();
@@ -101,7 +100,6 @@ void turnSensorReset();
 void turnSensorSetup();
 bool checkTheft();
 bool checkSurroundings();
-void avoid();
 void newAvoid();
 bool linesensor();
 void forward2(uint16_t, uint16_t);
@@ -114,6 +112,7 @@ uint8_t readRegister(uint8_t, uint8_t);
 void readHMC5883LData(int16_t *, int16_t *, int16_t *);
 void randomMovement();
 float calculateAngleError(float, float);
+void turnRandom();
 
 void setup()
 {
@@ -275,7 +274,11 @@ float getDistance()
   return (distanceL + distanceR) / 2;
 }
 
-// Go backwards a distance with a specified speed
+/**
+ * \brief Go backwards a distance with a specified speed
+ * \param dist Specify the length to go
+ * \param speed Specify the movement speed
+ */
 void backward(int dist = 0, int speed = 0)
 {
   resetEncoders();
@@ -287,45 +290,26 @@ void backward(int dist = 0, int speed = 0)
     int compSpeed = speed + diff * 0.5;
     motors.setSpeeds(-speed, -compSpeed);
   }
-  /*
   stop();
 
   // convert distance and the angle of robot to x and y coordinates
   robotposx = robotposx - dist * cos(robotangle / (180 / PI)); // ikke færdig
   robotposy = robotposy - dist * sin(robotangle / (180 / PI));
-  */
 }
 
-// is ways save object there in the way for robot, ambiguus for the moment.
-void saveObject()
-{
-}
-
-// Used to go to a specific location specified in x and y coordinates
-void pose(int x, int y)
-{
-}
-
-// Saves the curent position updates global var with current position in x and y coordinates // not
+/**
+ * \brief Saves the curent position updates global var with current position in x and y coordinates // not
+ */
 void savePos()
 {
   checkposx = robotposx;
   checkposy = robotposy;
 }
 
-/* this code just check if method "MoveToPos" Works
-void test()
-{
-
-  for (uint16_t i = 0; i < 2; i++)
-  {
-    MoveToPos(check[0][i], check[1][i]);
-  }
-}
-*/
-
-/* Read the gyro and update the angle.  This should be called as
- frequently as possible while using the gyro to do turns.*/
+/**
+ * \brief Read the gyro and update the angle.  This should be called as
+ * frequently as possible while using the gyro to do turns.
+ */
 void turnSensorUpdate()
 {
   // Read the measurements from the gyro.
@@ -353,14 +337,18 @@ void turnSensorUpdate()
   turnAngle += (int64_t)d * 14680064 / 17578125;
 }
 
-// This should be called to set the starting point for measuring
-// a turn.  After calling this, turnAngle will be 0.
+/**
+ * \brief This should be called to set the starting point for measuring a turn.  After calling this, turnAngle will be 0.
+ */
 void turnSensorReset()
 {
   gyroLastUpdate = micros();
   turnAngle = 0;
 }
 
+/**
+ * \retval Returns the estimated turn angle in degrees.
+ */
 uint32_t getTurnAngleInDegrees()
 {
   turnSensorUpdate();
@@ -397,7 +385,7 @@ void turnByAngleNew(int angleToTurn = 0)
       }
       else
       {
-        motors.setSpeeds(-100, 100);
+        motors.setSpeeds(-100, 100); // Drive left slow
       }
     }
     else
@@ -408,11 +396,11 @@ void turnByAngleNew(int angleToTurn = 0)
       }
       else
       {
-        motors.setSpeeds(100, -100);
+        motors.setSpeeds(100, -100); // DRive right slow
       }
     }
   }
-  robotangle = offsetAngValue(robotangle, ang);
+  robotangle = offsetAngValue(robotangle, ang);                      // Save new rob angle
   motors.setSpeeds(0, 0);                                            // Stop
   Serial.println("Turned by angle to: " + String(ang) + " Degrees"); // Print resulting angle
 }
@@ -421,7 +409,7 @@ void turnByAngleNew(int angleToTurn = 0)
  * \brief Rotates twice while recording values from the proximity sensors.
  * \return Returns true if a thieve is detected. Returns false if no thieve is detected
  */
-bool checkTheft() // kordnate
+bool checkTheft()
 {
 
   // Initialise variables
@@ -454,27 +442,31 @@ bool checkTheft() // kordnate
     // Serial.println("Vinkel: " + String(angle) + " numTurns: " + String(numTurns) + " Turn angle in degrees: " + String(getTurnAngleInDegrees()) + " StartAngle: " + startAngle);
 
     // Count number of full rotations
-    if (angle == 180)
+    if (angle == 180) // When the robot is at a half turn
     {
-      halfway = true;
+      halfway = true; // Set the halfway mark
     }
-    if (halfway && angle == 0)
+    if (halfway && angle == 0) // When robot have done a full rotation
     {
-      numTurns++;
+      numTurns++; // Increment the number of full turns
     }
-    if (angle == 0)
+    if (angle == 0) // When robot at the 0 position
     {
-      halfway = false;
+      halfway = false; // Reset the halfway mark
     }
 
     // Store reading from proximity sensor.
+    // If the angle of the robot is devisible by 40 with a remainder of 0, take a measurement
+    // Since 360/40 is 9, 9 measurements will be taken during each rotation
     if (angle % 40 == 0 && stepNoted == false)
     {
       // Reads values for the front proximity sensor, if there is an object in range of the left or right IR light.
       proximitySensor.read();
       // Add the two readings for an avg.
       int proxReading = (proximitySensor.countsFrontWithLeftLeds() + proximitySensor.countsFrontWithRightLeds());
+      // Set the stepNoted mark to make sure that only one measurement will be recorded for each step.
       stepNoted = true;
+      // Calculate the measurement index number, the execution pointer will only be here if angle%40=0 therefor angle/40 will always be an integer.
       int index = angle / 40;
       // Store in correct array
       if (numTurns == 0)
@@ -525,14 +517,14 @@ bool checkTheft() // kordnate
   if (error > thieveThreshold)
   {
     ALARM();
-    buttonA.waitForButton();
+    buttonA.waitForButton(); // If a thieve is detected, wait for user (operator) to take action.
     return true;
   }
   return false;
 }
 
 /**
- * \brief Go forward a distance with a specified speed
+ * \brief Go forward a distance with a specified speed while continuously monitoring surroundings
  * \param dist Specify the distance that the robot should, move only allows posetive integers.
  * \param speed Specify the speed at which the robot should move, only allows posetive integers.
  */
@@ -565,28 +557,24 @@ void forward(uint16_t dist = 0, uint16_t speed = 0)
       diff = leftEncCount - rightEncCount;
     }
 
-    // rest encode so surround don't effect distance
-    /*
-    If right is ahead, diff is negative. If right is behind, diff is positive.
-    */
-
-    // Serial.println(diff);
+    // If right is ahead, diff is negative. If right is behind, diff is positive.
     int compSpeed = speed + diff * 5;
     motors.setSpeeds(speed, compSpeed);
-    display.clear();      // Clears the OLED display.
-    display.gotoXY(0, 0); // Sets the position on the OLED, where the message should be printed.
+
+    // Print the left and right speed to the screen
+    display.clear();
+    display.gotoXY(0, 0);
     display.print(speed);
     display.gotoXY(0, 1);
     display.print(compSpeed);
   }
   stop();
 
-  // convert distance and the angle of robot to x and y coordinates
-  // i stedet for angle skal der bruges "getTurnAngleInDegrees()"
-  robotposx = robotposx + dist * cos(robotangle / (180 / PI)); // ikke færdig
+  // Convert distance and the angle of robot to x and y coordinates
+  robotposx = robotposx + dist * cos(robotangle / (180 / PI));
   robotposy = robotposy + dist * sin(robotangle / (180 / PI));
 
-  // just to check
+  // Debugging
   /*
   display.clear();          // Clears the OLED display.
   display.gotoXY(0, 0);     // Sets the position on the OLED, where the message should be printed.
@@ -596,27 +584,21 @@ void forward(uint16_t dist = 0, uint16_t speed = 0)
   */
 }
 
+/**
+ * \brief Go forward a distance with a specified speed without monitoring the surroundings
+ * \param dist Specify the distance that the robot should, move only allows posetive integers.
+ * \param speed Specify the speed at which the robot should move, only allows posetive integers.
+ */
 void forward2(uint16_t dist = 0, uint16_t speed = 0)
 {
   int diff = 0;
-  float leftEncCount = 0;
-  float rightEncCount = 0;
   resetEncoders();
   checkDist = 0;
   while (getDistance() + checkDist < dist)
   {
-    bool check = false;
-    leftEncCount = encoders.getCountsLeft();
-    rightEncCount = encoders.getCountsRight();
-
-    // display.clear();      // Clears the OLED display.
-
     diff = encoders.getCountsLeft() - encoders.getCountsRight();
 
-    // rest encde so surround don't effect distance
-    /*
-    If right is ahead, diff is negative. If right is behind, diff is positive.
-    */
+    // If right is ahead, diff is negative. If right is behind, diff is positive.
 
     // Serial.println(diff);
     int compSpeed = speed + diff * 5;
@@ -624,106 +606,46 @@ void forward2(uint16_t dist = 0, uint16_t speed = 0)
   }
   stop();
 
-  // convert distance and the angle of robot to x and y coordinates
-  // i stedet for angle skal der bruges "getTurnAngleInDegrees()"
-  robotposx = robotposx + dist * cos(robotangle / (180 / PI)); // ikke færdig
+  // Convert distance and the angle of robot to x and y coordinates
+  robotposx = robotposx + dist * cos(robotangle / (180 / PI));
   robotposy = robotposy + dist * sin(robotangle / (180 / PI));
-
-  // just to check
-  /*
-  display.clear();          // Clears the OLED display.
-  display.gotoXY(0, 0);     // Sets the position on the OLED, where the message should be printed.
-  display.print(robotposx); // 20                                  // Prints "Obstacle".
-  display.gotoXY(0, 1);     // Sets the position on the OLED, where the next line should be printed.
-  display.print(robotposy); // 46
-  */
 }
 
-// Avoid collision with a object by going around it, return true when done.
-void avoid()
-{
-  checkDist += getDistance();
-  backward(3, 100);
-  stop();
-  delay(50);
-
-  turnByAngleNew(90);
-  stop();
-  delay(50);
-
-  forward(10, 100);
-  stop();
-  delay(50);
-
-  turnByAngleNew(270);
-  stop();
-  delay(50);
-
-  forward(avoidDist, 100);
-  stop();
-  delay(50);
-
-  turnByAngleNew(270);
-  stop();
-  delay(50);
-
-  forward(10, 100);
-  stop();
-  delay(50);
-
-  turnByAngleNew(90);
-  stop();
-  delay(50);
-
-  forward(3, 100);
-  stop();
-  delay(50);
-  checkDist += avoidDist;
-  resetEncoders();
-}
-
-// Robot detects if any object is infront of it, returns true if a object is present.
+/**
+ * \brief Robot detects if any object is infront of it.
+ * \returns Returns true if a object is present.
+ */
 bool detectObject()
 {
   proximitySensor.read();
   int leftReading = proximitySensor.countsFrontWithLeftLeds();
   int rightReading = proximitySensor.countsFrontWithRightLeds();
 
-  if (leftReading >= objThreshold || rightReading >= objThreshold)
+  if (leftReading >= objThreshold || rightReading >= objThreshold) // If left or right reading is above the preset threshold.
   {
 
     display.clear();      // Clears the OLED display.
     display.gotoXY(0, 0); // Sets the position on the OLED, where the message should be printed.
     display.print("theft");
-    if (!checkTheft())
+    if (!checkTheft()) // If it is not a thieve
     {
-      // avoid();
       display.clear();      // Clears the OLED display.
       display.gotoXY(0, 0); // Sets the position on the OLED, where the message should be printed.
       display.print("avoid");
 
-      newAvoid();
-
-      /// Husk !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+      newAvoid(); // Do obstacle avoidance
     }
-    /*
-                                  // If the sensor readings is more or equal to the threshold value, then the robot should print "Obstacle ahead!" to the OLED.
-    display.clear();              // Clears the OLED display.
-    display.gotoXY(0, 0);         // Sets the position on the OLED, where the message should be printed.
-    display.print(F("Obstacle")); // Prints "Obstacle".
-    display.gotoXY(0, 1);         // Sets the position on the OLED, where the next line should be printed.
-    display.print(F("ahead!"));   // Prints "ahead!".
-    return true;
-     */
-
     resetEncoders();
     return true;
   }
   return false;
 }
 
-// Robot detects if any object is infront of it, returns true if a object is present.
-
+/**
+ * \brief Should be called very often to check if the robot is on top of a line.
+ * If a line is detected the robot will reverse and obtain a new direction from that point.
+ * \returns Returns true if a line was detected and the new direction has been obtained
+ */
 bool linesensor()
 {
   // Read line sensor values
@@ -747,50 +669,12 @@ bool linesensor()
     return true;
   }
   return false;
-
-  /* if (getDistance() > 150)
-   {
-     motors.setSpeeds(speed, speed);
-     resetEncoders();
-   }
- }
- // decides which way the robot will turn
- // right
- else if (getDistance() < 50)
- {
-   int randnumber = random(300, 500);
-   motors.setSpeeds(-200, 200);
-   delay(randnumber);
-   stop();
- }
- // left
- else if (getDistance() < 100)
- {
-   int randnumber = random(300, 500);
-   motors.setSpeeds(200, -200);
-   delay(randnumber);
-   stop();
- }
- // random
- else if (getDistance() < 150)
- {
-   int randNumber = random(300, 500);
-   long dir = random(1, 3);
-   if (dir == 1)
-     motors.setSpeeds(200, -200);
-   else
-     motors.setSpeeds(-200, 200);
-   delay(randNumber);
-   motors.setSpeeds(0, 0);
- }
- else
- {
-   stop();
-   resetEncoders();
- }
- */
 }
 
+/**
+ * \brief A function that handels all obstacles that the robot might encounter, should be called as often as possible.
+ * \returns Returns true if the robot has interacted with any obstacle
+ */
 bool checkSurroundings()
 {
   bool check = false;
@@ -806,7 +690,11 @@ bool checkSurroundings()
   return check;
 }
 
-// It move the robot to given positions
+/**
+ * \brief Executie a move of the robot to the given position
+ * \param x the x-coordinate of the ending position
+ * \param y the y-coordinate of the ending position
+ */
 void MoveToPos(int x = 0, int y = 0)
 {
   display.clear();      // Clears the OLED display.
@@ -825,37 +713,15 @@ void MoveToPos(int x = 0, int y = 0)
   int angle = 0;
   int dist = 0;
 
-  // check if the positions need too add on or minus with
-  /*if (x > robotposx)
-  {
-    newposx = x - robotposx;
-  }
-  else
-  {
-    newposx = robotposx - x;
-  }
-
-  if (y > newposy)
-  {
-    newposy = y - robotposy;
-  }
-  else
-  {
-    newposy = robotposy - y;
-  }
-
-  newposx = robotposx + newposx;
-  newposy = robotposy + newposy; */
-
   newposx = x - robotposx;
   newposy = y - robotposy;
 
   display.clear();      // Clears the OLED display.
   display.gotoXY(0, 0); // Sets the position on the OLED, where the message should be printed.
-  display.print("newx: " + String(newposx));
+  display.print("new-x: " + String(newposx));
 
   display.gotoXY(0, 1); // Sets the position on the OLED, where the message should be printed.
-  display.print("newy: " + String(newposy));
+  display.print("new-y: " + String(newposy));
   delay(1500);
 
   // angle get round up it float return get convert to int
@@ -883,35 +749,18 @@ void MoveToPos(int x = 0, int y = 0)
 
   Serial.println("angle: ");
   Serial.println(angle);
-  /* den virk med dette men burde ikke bruges if (angle > robotangle)
-  {
-    angle = angle - robotangle;
 
-  else
-  {
-    angle = robotangle - angle;
-   */
-
-  // Her we put the angle and distance robot too travel
-  // turn
+  // Here we put the angle and distance for the robot to travel
   turnByAngleNew(angle);
   forward(dist, 200);
 }
 
-/** \brief Robot turns right or left with a specified radius, angle and speed.
- *
- * \param dir 0 = Right 1 = Left
+/**
+ * \brief Gyro setup and convenience functions
  */
-void turnArc(bool dir = 0, int radius = 100, int speed = 100)
-{
-}
-
-/*
-Gyro setup and convenience functions
-*/
 void turnSensorSetup()
 {
-  // Wire.begin();
+  Wire.begin();
   imu.init();
   imu.enableDefault();
   imu.configureForTurnSensing();
@@ -947,7 +796,9 @@ void turnSensorSetup()
   turnSensorReset();
 }
 
-// Turns the robot a random angle
+/**
+ * \brief Turns the robot a random angle
+ */
 void turnRandom()
 {
   int randomNumber = random(10, 359);
@@ -957,6 +808,9 @@ void turnRandom()
   delay(1000);
 }
 
+/**
+ * \brief Turns the robot a random angle and starts a move with a random speed and a random length
+ */
 void navigateRandom()
 {
   int randDist = random(10, 50);
@@ -966,49 +820,12 @@ void navigateRandom()
   delay(50);
 }
 
-void randomMovement()
-{
-  /*  for (int i = 0; i < 6; i++)
-   {
-     int caseNumber = random(1, 3);
-     int distRandom = random(5, 50);
-     int turnRandom = random(10, 359);
-     display.clear();
-     delay(500);
-     int caseNumber = random(1, 3);
-     int distRandom = random(10, 50);
-     int speedRandom = random(25, 200);
-     int turnR = (10, 359);
-     display.gotoXY(0, 0);
-     display.print(caseNumber);
-     display.print(caseNumber);
-     delay(1000);
-     switch (caseNumber)
-     {
-     case (1):
-       display.clear();
-       display.gotoXY(0, 0);
-       display.print(distRandom);
-       forward(distRandom, 100);
-       display.clear();
-       display.gotoXY(0, 0);
-       display.print(distRandom);
-       display.gotoXY(0, 1);
-       display.print(speedRandom);
-       forward2(distRandom, speed);
-       break;
-
-     case (2):
-       display.clear();
-       display.gotoXY(0, 0);
-       display.print(turnR);
-       turnByAngleNew(turnR);
-       delay(1500);
-       break;
-     }
-   } */
-}
-
+/**
+ * \brief Executies a precision turn based on the magnetometer reading
+ * \param angle Specify the angle to turn by, relative to the robot current position.
+ * \param maxError Specify the precision level of the turn, the closed loop turning will stop after being within the limit for 2 seconds
+ *  
+ */
 void turnByMag(float angle, float maxError)
 {
   // Get the initial heading
@@ -1080,12 +897,19 @@ void turnByMag(float angle, float maxError)
   Serial.println("EndHead: " + String(endHead));
 }
 
+/**
+ * \brief Makes the most recent magnetometer data available in mx, my and mz
+ */
 void getMag()
 {
   // Reads the magnetometer and stores the raw data in the global variables.
   readHMC5883LData(&mx, &my, &mz);
 }
 
+/**
+ * \brief Updates and calculate the absolute heading of the robot based on the magnetometer
+ * \returns Return the absolute magnetic heading of the robot, not compensated for the magnetic declination of the location the robot is working in.
+ */
 float getMagHeading()
 {
   getMag();
@@ -1114,7 +938,9 @@ float getMagHeading()
 
   return headingDegrees;
 }
-
+/**
+ * \brief Write a value to a address of an i2c device
+ */
 void writeRegister(uint8_t deviceAddress, uint8_t regAddress, uint8_t value)
 {
   SoftWire.beginTransmission(deviceAddress);
@@ -1123,6 +949,9 @@ void writeRegister(uint8_t deviceAddress, uint8_t regAddress, uint8_t value)
   SoftWire.endTransmission();
 }
 
+/**
+ * \brief Read the value of an address of an i2c device
+ */
 uint8_t readRegister(uint8_t deviceAddress, uint8_t regAddress)
 {
   SoftWire.beginTransmission(deviceAddress);
@@ -1133,6 +962,9 @@ uint8_t readRegister(uint8_t deviceAddress, uint8_t regAddress)
   return SoftWire.read();
 }
 
+/**
+ * \brief Read raw data of magnetometer and store the readings in x, y and z vars.
+ */
 void readHMC5883LData(int16_t *x, int16_t *y, int16_t *z)
 {
   SoftWire.beginTransmission(HMC5883L_ADDR);
